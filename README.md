@@ -11,7 +11,8 @@ REQUIREMENTS
 ============
 
 * Tcl 8.6
-* LLVM 3.5
+* LLVM 3.5 (or 3.6)
+* Optional: CMake for Windows Build
 
 CONTENTS
 ========
@@ -65,6 +66,8 @@ the sample extension.
        tcl.m4       Collection of Tcl autoconf macros.  Included by
                     aclocal.m4 to define SC_* macros.
 
+    CMakeLists.txt  CMake Build File. 
+
 UNIX BUILD
 ==========
 
@@ -88,7 +91,35 @@ Add the llvm lib directory containing the llvm shared object files to the
 WINDOWS BUILD
 =============
 
-Not available.
+A basic build system based on the CMake project file generator is available.
+See [CMake](http://cmake.org) for details.
+
+You can build the llvmtcl package with VisualStudio 12 like this:
+
+64-Bit Build
+------------
+
+You need to have built llvm-3.6 with CMake for x64 and should have an installed Tcl (e.g. ActiveTcl x64).
+
+    c:\devel\tclllvm> md build_x64
+    c:\devel\tclllvm> cd build_x64
+    c:\devel\tclllvm\build_x64> "c:\Program Files (x86)\CMake\bin\cmake.exe" -G"Visual Studio 12 2013 Win64" ..
+    c:\devel\tclllvm\build_x64> msbuild llvmtcl.sln /t:Build /p:Configuration=RelWithDebInfo /p:Platform="x64"
+
+If you want to install the build, you can use the INSTALL target, which will install it in the location given
+by the `CMAKE_INSTALL_PREFIX` in a subdir like `lib/llvmtcl3.6`.
+
+32-Bit Build
+------------
+You need to have built llvm-3.6 with CMake for x86 and should have an installed Tcl (e.g. ActiveTcl win32).
+
+    c:\devel\tclllvm> md build_x86
+    c:\devel\tclllvm> cd build_x86
+    c:\devel\tclllvm\build_x86> "c:\Program Files (x86)\CMake\bin\cmake.exe" -G"Visual Studio 12 2013" ..
+    c:\devel\tclllvm\build_x86> msbuild llvmtcl.sln /t:Build /p:Configuration=RelWithDebInfo /p:Platform="Win32"
+
+If you want to install the build, you can use the INSTALL target, which will install it in the location given
+by the `CMAKE_INSTALL_PREFIX` in a subdir like `lib/llvmtcl3.6`.
 
 INSTALLATION
 ============

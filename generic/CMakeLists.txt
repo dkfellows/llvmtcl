@@ -1,23 +1,31 @@
+# Generate the llvm interfaces
+#
 ADD_CUSTOM_COMMAND(
-   OUTPUT llvmtcl-gen-cmddef.c llvmtcl-gen-map.c llvmtcl-gen.c
+	OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/llvmtcl-gen-cmddef.c ${CMAKE_CURRENT_BINARY_DIR}/llvmtcl-gen-map.c ${CMAKE_CURRENT_BINARY_DIR}/llvmtcl-gen.c
    COMMAND ${TCL_TCLSH} ${CMAKE_CURRENT_SOURCE_DIR}/../llvmtcl-gen.tcl "${CMAKE_CURRENT_BINARY_DIR}/.."
    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/../llvmtcl-gen.tcl 
            ${CMAKE_CURRENT_SOURCE_DIR}/../llvmtcl-gen.inp 
    )
+ADD_CUSTOM_TARGET(generate_defs DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/llvmtcl-gen-cmddef.c)
 
-add_library(llvmtcl SHARED "llvmtcl.cpp")
+SET_SOURCE_FILES_PROPERTIES(
+	${CMAKE_CURRENT_BINARY_DIR}/llvmtcl-gen-cmddef.c PROPERTIES GENERATED 1)
+SET_SOURCE_FILES_PROPERTIES(
+	${CMAKE_CURRENT_BINARY_DIR}/llvmtcl-gen-map.c PROPERTIES GENERATED 1)
+SET_SOURCE_FILES_PROPERTIES(
+	${CMAKE_CURRENT_BINARY_DIR}/llvmtcl-gen.c PROPERTIES GENERATED 1)
 
-# Link against LLVM libraries
+ADD_DEFINITIONS(${LLVM_DEFINITIONS} "-DUSE_TCL_STUBS" "-DPACKAGE_NAME=\"${PACKAGE_NAME}\"" "-DPACKAGE_VERSION=\"${PACKAGE_VERSION}\"")
+INCLUDE_DIRECTORIES(${LLVM_INCLUDE_DIRS} ${TCL_INCLUDE_PATH} ${CMAKE_CURRENT_BINARY_DIR})
+
+
+ADD_LIBRARY(llvmtcl SHARED llvmtcl.cpp)
+# depend on the generated files above
+ADD_DEPENDENCIES(llvmtcl generate_defs)
 
 # Find the libraries that correspond to the LLVM components
 # that we wish to use
 llvm_map_components_to_libnames(llvm_libs all)
-target_link_libraries(llvmtcl ${llvm_libs} ${TCL_STUB_LIBRARY})
+TARGET_LINK_LIBRARIES(llvmtcl ${llvm_libs} ${TCL_STUB_LIBRARY})
 
-SET_SOURCE_FILES_PROPERTIES(
-	${CMAKE_CURRENT_BINARY_DIR}/generic/llvmtcl-gen-cmddef.c PROPERTIES GENERATED 1)
-SET_SOURCE_FILES_PROPERTIES(
-	${CMAKE_CURRENT_BINARY_DIR}/generic/llvmtcl-gen-map.c PROPERTIES GENERATED 1)
-SET_SOURCE_FILES_PROPERTIES(
-	${CMAKE_CURRENT_BINARY_DIR}/generic/llvmtcl-gen.c PROPERTIES GENERATED 1)
-
+INSTALL(TARGETS llvmtcl	DESTINATION "lib/${PACKAGE_NAME}${PACKAGE_VERSION}")
