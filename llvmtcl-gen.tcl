@@ -469,13 +469,19 @@ proc gen_map {mf l} {
     puts $mf "\}"
 }
 
-set f [open llvmtcl-gen.inp r]
+set base [file dirname [info script]]
+if {[llength $argv] == 1} {
+    set builddir [lindex $argv 0]
+} else {
+    set builddir $base
+}
+set f [open [file join $base llvmtcl-gen.inp] r]
 set ll [split [read $f] \n]
 close $f
 
-set cf [open generic/llvmtcl-gen.c w]
-set of [open generic/llvmtcl-gen-cmddef.c w]
-set mf [open generic/llvmtcl-gen-map.c w]
+set cf [open [file join $builddir generic/llvmtcl-gen.c] w]
+set of [open [file join $builddir generic/llvmtcl-gen-cmddef.c] w]
+set mf [open [file join $builddir generic/llvmtcl-gen-map.c] w]
 
 foreach l $ll {
     set l [string trim $l]
