@@ -548,7 +548,10 @@ DefineFunctionType(
 	elements.push_back(type);
     }
 
-    auto val = builder->createSubroutineType(file,
+    auto val = builder->createSubroutineType(
+#if LLVM_VERSION_MAJOR < 3 || LLVM_VERSION_MAJOR == 3 && LLVM_VERSION_MINOR < 8
+	    file,
+#endif
 	    builder->getOrCreateTypeArray(elements));
 
     Tcl_SetObjResult(interp, NewMetadataObj(val, "FunctionType"));
