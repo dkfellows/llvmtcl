@@ -32,6 +32,32 @@ TEA_INIT([3.7])
 AC_CONFIG_AUX_DIR(tclconfig)
 
 #--------------------------------------------------------------------
+#--------------------------------------------------------------------
+
+AC_ARG_WITH(llvm-config,
+    AC_HELP_STRING([--with-llvm-config=FILE],
+	[exact name of LLVM configuration description program; will be
+	    searched for on the PATH if not already fully qualified
+	    (llvm-config)]),
+    [LLVMCONFIG=$withval],
+    [LLVMCONFIG=llvm-config])
+AC_PATH_PROG(LLVMCONFIG,[$LLVMCONFIG],[$LLVMCONFIG],[no])
+AS_IF([test "x$LLVMCONFIG" = "xno"], [
+	AC_MSG_ERROR(llvm-config not usable)])
+AC_MSG_CHECKING([for llvm-config usability])
+AS_IF([llvm_version=`$LLVMCONFIG --version`], [
+	AC_MSG_RESULT(seems fine (version: $llvm_version))], [
+	AC_MSG_ERROR(llvm-config not usable)])
+AC_SUBST(LLVMCONFIG)
+# llvm-config --system-libs is rubbish!
+# See https://github.com/rust-lang/rust/issues/34486
+# See https://github.com/llvm-mirror/llvm/blob/7d7a23e700b5074c86834f1e597703bc58f637a8/tools/llvm-config/llvm-config.cpp#L680
+case $llvm_version in
+    2.* | 3.[1234567].*) ;;
+    *)	AC_SEARCH_LIBS([ffi_call], [ffi]);;
+esac
+
+#--------------------------------------------------------------------
 # Load the tclConfig.sh file
 #--------------------------------------------------------------------
 
@@ -181,25 +207,6 @@ TEA_MAKE_LIB
 
 TEA_PROG_TCLSH
 #TEA_PROG_WISH
-
-#--------------------------------------------------------------------
-#--------------------------------------------------------------------
-
-AC_ARG_WITH(llvm-config,
-    AC_HELP_STRING([--with-llvm-config=FILE],
-	[exact name of LLVM configuration description program; will be
-	    searched for on the PATH if not already fully qualified
-	    (llvm-config)]),
-    [LLVMCONFIG=$withval],
-    [LLVMCONFIG=llvm-config])
-AC_PATH_PROG(LLVMCONFIG,[$LLVMCONFIG],[$LLVMCONFIG],[no])
-AS_IF([test "x$LLVMCONFIG" = "xno"], [
-	AC_MSG_ERROR(llvm-config not usable)])
-AC_MSG_CHECKING([for llvm-config usability])
-AS_IF([llvm_version=`$LLVMCONFIG --version`], [
-	AC_MSG_RESULT(seems fine (version: $llvm_version))], [
-	AC_MSG_ERROR(llvm-config not usable)])
-AC_SUBST(LLVMCONFIG)
 
 #--------------------------------------------------------------------
 # Finally, substitute all of the various values into the Makefile.
