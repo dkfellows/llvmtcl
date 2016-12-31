@@ -862,6 +862,38 @@ ReplaceFunctionVariables(
     function->resolveCycles();
     return TCL_OK;
 }
+
+int
+SetModuleFunctions(
+    ClientData clientData,
+    Tcl_Interp *interp,
+    int objc,
+    Tcl_Obj *const objv[])
+{
+    if (objc < 3) {
+	Tcl_WrongNumArgs(interp, 1, objv,
+		"dibuilder compileUnit function...");
+	return TCL_ERROR;
+    }
+
+    DIBuilder *builder;
+    if (GetDIBuilderFromObj(interp, objv[1], builder) != TCL_OK)
+	return TCL_ERROR;
+    DICompileUnit *module;
+    if (GetMetadataFromObj(interp, objv[2], "compileUnit", module) != TCL_OK)
+	return TCL_ERROR;
+    std::vector<Metadata*> functions;
+    for (int i=3 ; i<objc ; i++) {
+	DISubprogram *func;
+	if (GetMetadataFromObj(interp, objv[i], "function", func) != TCL_OK)
+	    return TCL_ERROR;
+	functions.push_back(func);
+    }
+
+    module->replaceSubprograms((MDTupleTypedArrayWrapper<DISubprogram>)
+	    builder->getOrCreateArray(functions));
+    return TCL_OK;
+}
 
 /*
  * ----------------------------------------------------------------------

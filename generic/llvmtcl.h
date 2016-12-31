@@ -47,6 +47,7 @@ DECL_CMD(DefineFunction);
 DECL_CMD(ReplaceFunctionVariables);
 DECL_CMD(DefineParameter);
 DECL_CMD(DefineLocal);
+DECL_CMD(SetModuleFunctions);
 DECL_CMD(AttachToFunction);
 DECL_CMD(SetInstructionLocation);
 DECL_CMD(LLVMAddLLVMTclCommandsObjCmd);
