@@ -820,16 +820,16 @@ BuildDbgValue(
 /*
  * ----------------------------------------------------------------------
  *
- * ClearFunctionVariables --
+ * SetFunctionVariables --
  *
- *	Removes the temporary metadata associated with a function's variables.
- *	This is critical because otherwise the validation of the module fails.
+ *	Sets what a function's variables are. This is critical because
+ *	otherwise the validation of the module fails.
  *
  * ----------------------------------------------------------------------
  */
 
 int
-ReplaceFunctionVariables(
+SetFunctionVariables(
     ClientData clientData,
     Tcl_Interp *interp,
     int objc,
@@ -862,6 +862,18 @@ ReplaceFunctionVariables(
     function->resolveCycles();
     return TCL_OK;
 }
+
+/*
+ * ----------------------------------------------------------------------
+ *
+ * SetModuleFunctions --
+ *
+ *	Sets what a module's functions are. This is critical because otherwise
+ *	the validation of the module fails. (In LLVM 3.8, this is expressed as
+ *	an assertion failure, which is particularly unpleasant.)
+ *
+ * ----------------------------------------------------------------------
+ */
 
 int
 SetModuleFunctions(
@@ -890,8 +902,9 @@ SetModuleFunctions(
 	functions.push_back(func);
     }
 
-    module->replaceSubprograms((MDTupleTypedArrayWrapper<DISubprogram>)
-	    builder->getOrCreateArray(functions));
+    module->replaceSubprograms(
+	    static_cast<MDTupleTypedArrayWrapper<DISubprogram>>(
+		    builder->getOrCreateArray(functions)));
     return TCL_OK;
 }
 

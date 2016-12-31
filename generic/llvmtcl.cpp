@@ -867,7 +867,7 @@ DLLEXPORT int Llvmtcl_Init(Tcl_Interp *interp)
     LLVMObjCmd("llvmtcl::DebugInfo::Local", DefineLocal);
     LLVMObjCmd("llvmtcl::DebugInfo::Function", DefineFunction);
     LLVMObjCmd("llvmtcl::DebugInfo::Function.SetVariables",
-	    ReplaceFunctionVariables);
+	    SetFunctionVariables);
     LLVMObjCmd("llvmtcl::DebugInfo::CompileUnit.SetFunctions",
 	    SetModuleFunctions);
     LLVMObjCmd("llvmtcl::DebugInfo::Instruction.SetLocation",
