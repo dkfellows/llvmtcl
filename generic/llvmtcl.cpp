@@ -859,6 +859,7 @@ DLLEXPORT int Llvmtcl_Init(Tcl_Interp *interp)
     LLVMObjCmd("llvmtcl::DebugInfo::Location", DefineLocation);
     LLVMObjCmd("llvmtcl::DebugInfo::UnspecifiedType", DefineUnspecifiedType);
     LLVMObjCmd("llvmtcl::DebugInfo::AliasType", DefineAliasType);
+    LLVMObjCmd("llvmtcl::DebugInfo::ArrayType", DefineArrayType);
     LLVMObjCmd("llvmtcl::DebugInfo::BasicType", DefineBasicType);
     LLVMObjCmd("llvmtcl::DebugInfo::PointerType", DefinePointerType);
     LLVMObjCmd("llvmtcl::DebugInfo::StructType", DefineStructType);

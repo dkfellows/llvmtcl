@@ -10,6 +10,9 @@ static std::map<std::string, MDNode*> Metadata_map;
 static std::map<MDNode*, std::string> Metadata_refmap;
 static std::map<std::string, DIBuilder*> Builder_map;
 static std::map<DIBuilder*, std::string> Builder_refmap;
+
+#define ALIGN_SIZE(size) \
+    (((size) + sizeof(long) - 1) &~ (sizeof(long) - 1))
 
 /*
  * ----------------------------------------------------------------------
@@ -601,6 +604,50 @@ DefineAliasType(
     auto val = builder->createTypedef(type, name, file, line, context);
 
     Tcl_SetObjResult(interp, NewMetadataObj(val, "AliasType"));
+    return TCL_OK;
+}
+
+/*
+ * ----------------------------------------------------------------------
+ *
+ * DefineArrayType --
+ *
+ *	Defines an array type.
+ *
+ * ----------------------------------------------------------------------
+ */
+
+int
+DefineArrayType(
+    ClientData clientData,
+    Tcl_Interp *interp,
+    int objc,
+    Tcl_Obj *const objv[])
+{
+    if (objc != 5) {
+	Tcl_WrongNumArgs(interp, 1, objv,
+		"DIBuilder type elementCount elementByteSize");
+	return TCL_ERROR;
+    }
+
+    DIBuilder *builder;
+    if (GetDIBuilderFromObj(interp, objv[1], builder) != TCL_OK)
+	return TCL_ERROR;
+    DIType *type;
+    if (GetMetadataFromObj(interp, objv[2], "type", type) != TCL_OK)
+	return TCL_ERROR;
+    int cnt, sz;
+    if (Tcl_GetIntFromObj(interp, objv[3], &cnt) != TCL_OK)
+	return TCL_ERROR;
+    if (Tcl_GetIntFromObj(interp, objv[4], &sz) != TCL_OK)
+	return TCL_ERROR;
+
+    SmallVector<Metadata *, 4> subscripts;
+    subscripts.push_back(builder->getOrCreateSubrange(0, cnt));
+    auto val = builder->createArrayType(cnt * sz, ALIGN_SIZE(cnt * sz) * NBBY,
+	    type, builder->getOrCreateArray(subscripts));
+
+    Tcl_SetObjResult(interp, NewMetadataObj(val, "ArrayType"));
     return TCL_OK;
 }
 

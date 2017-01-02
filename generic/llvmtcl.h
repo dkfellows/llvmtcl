@@ -40,6 +40,7 @@ DECL_CMD(DefineLocation);
 DECL_CMD(DefineNamespace);
 DECL_CMD(DefineUnspecifiedType);
 DECL_CMD(DefineAliasType);
+DECL_CMD(DefineArrayType);
 DECL_CMD(DefineBasicType);
 DECL_CMD(DefinePointerType);
 DECL_CMD(DefineStructType);
