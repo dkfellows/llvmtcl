@@ -677,7 +677,7 @@ DefineParameter(
     DIBuilder *builder;
     if (GetDIBuilderFromObj(interp, objv[1], builder) != TCL_OK)
 	return TCL_ERROR;
-    DIScope *scope;
+    DISubprogram *scope;
     if (GetMetadataFromObj(interp, objv[2], "scope", scope) != TCL_OK)
 	return TCL_ERROR;
     std::string name = Tcl_GetString(objv[3]);
@@ -700,12 +700,12 @@ DefineParameter(
 
 #if (LLVM_VERSION_MAJOR >=3 && LLVM_VERSION_MINOR > 7)
     auto val = builder->createParameterVariable(scope, name,
-	    (unsigned) argIndex, file, (unsigned) line, type);
+	    (unsigned) argIndex, file, (unsigned) line, type, true);
 #else
     // This API was deprecated (and made private) after 3.7
     auto val = builder->createLocalVariable(
 	    llvm::dwarf::DW_TAG_arg_variable, scope, name, file,
-	    (unsigned) line, type, false, 0, (unsigned) argIndex);
+	    (unsigned) line, type, true, 0, (unsigned) argIndex);
 #endif
 
     Tcl_SetObjResult(interp, NewMetadataObj(val, "Variable"));
@@ -738,7 +738,7 @@ DefineLocal(
     DIBuilder *builder;
     if (GetDIBuilderFromObj(interp, objv[1], builder) != TCL_OK)
 	return TCL_ERROR;
-    DIScope *scope;
+    DILocalScope *scope;
     if (GetMetadataFromObj(interp, objv[2], "scope", scope) != TCL_OK)
 	return TCL_ERROR;
     std::string name = Tcl_GetString(objv[3]);
@@ -754,12 +754,12 @@ DefineLocal(
 
 #if (LLVM_VERSION_MAJOR >=3 && LLVM_VERSION_MINOR > 7)
     auto val = builder->createAutoVariable(scope, name,
-	    file, (unsigned) line, type);
+	    file, (unsigned) line, type, true);
 #else
     // This API was deprecated (and made private) after 3.7
     auto val = builder->createLocalVariable(
 	    dwarf::DW_TAG_auto_variable, scope, name, file,
-	    (unsigned) line, type);
+	    (unsigned) line, type, true);
 #endif
 
     Tcl_SetObjResult(interp, NewMetadataObj(val, "Variable"));
@@ -821,7 +821,7 @@ DefineFunction(
  *
  * BuildDbgValue --
  *
- *	Creates a call to llvm.dbc.value and adds it the given basic block.
+ *	Creates a call to llvm.dbg.value and adds it the given basic block.
  *
  * ----------------------------------------------------------------------
  */
@@ -861,97 +861,6 @@ BuildDbgValue(
 	    location, b->GetInsertBlock());
 
     Tcl_SetObjResult(interp, NewValueObj(inst));
-    return TCL_OK;
-}
-
-/*
- * ----------------------------------------------------------------------
- *
- * SetFunctionVariables --
- *
- *	Sets what a function's variables are. This is critical because
- *	otherwise the validation of the module fails.
- *
- * ----------------------------------------------------------------------
- */
-
-int
-SetFunctionVariables(
-    ClientData clientData,
-    Tcl_Interp *interp,
-    int objc,
-    Tcl_Obj *const objv[])
-{
-    if (objc < 2) {
-	Tcl_WrongNumArgs(interp, 1, objv, "function variable...");
-	return TCL_ERROR;
-    }
-
-    DISubprogram *function;
-    if (GetMetadataFromObj(interp, objv[1], "function", function) != TCL_OK)
-	return TCL_ERROR;
-    std::vector<Metadata*> variables;
-    for (int i=2 ; i<objc ; i++) {
-	DILocalVariable *var;
-	if (GetMetadataFromObj(interp, objv[i], "variable", var) != TCL_OK)
-	    return TCL_ERROR;
-	variables.push_back(var);
-    }
-
-    auto vars = function->getVariables();
-    if (!vars->isTemporary()) {
-	Tcl_SetObjResult(interp, Tcl_NewStringObj(
-		"can only replace variable list when temporary", -1));
-	return TCL_ERROR;
-    }
-
-    vars->replaceAllUsesWith(MDNode::get(vars->getContext(), variables));
-    function->resolveCycles();
-    return TCL_OK;
-}
-
-/*
- * ----------------------------------------------------------------------
- *
- * SetModuleFunctions --
- *
- *	Sets what a module's functions are. This is critical because otherwise
- *	the validation of the module fails. (In LLVM 3.8, this is expressed as
- *	an assertion failure, which is particularly unpleasant.)
- *
- * ----------------------------------------------------------------------
- */
-
-int
-SetModuleFunctions(
-    ClientData clientData,
-    Tcl_Interp *interp,
-    int objc,
-    Tcl_Obj *const objv[])
-{
-    if (objc < 3) {
-	Tcl_WrongNumArgs(interp, 1, objv,
-		"dibuilder compileUnit function...");
-	return TCL_ERROR;
-    }
-
-    DIBuilder *builder;
-    if (GetDIBuilderFromObj(interp, objv[1], builder) != TCL_OK)
-	return TCL_ERROR;
-    DICompileUnit *module;
-    if (GetMetadataFromObj(interp, objv[2], "compileUnit", module) != TCL_OK)
-	return TCL_ERROR;
-    std::vector<Metadata*> functions;
-    for (int i=3 ; i<objc ; i++) {
-	DISubprogram *func;
-	if (GetMetadataFromObj(interp, objv[i], "function", func) != TCL_OK)
-	    return TCL_ERROR;
-	functions.push_back(func);
-    }
-
-    module->replaceSubprograms(
-	    static_cast<MDTupleTypedArrayWrapper<DISubprogram>>(
-		    builder->getOrCreateArray(functions)));
     return TCL_OK;
 }
 
