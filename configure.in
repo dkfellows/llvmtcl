@@ -32,6 +32,8 @@ TEA_INIT([3.7])
 AC_CONFIG_AUX_DIR(tclconfig)
 
 #--------------------------------------------------------------------
+# Determine where LLVM (really llvm-config) is and check that it's
+# possible to retrieve the information from it that we really need.
 #--------------------------------------------------------------------
 
 AC_ARG_WITH(llvm-config,
