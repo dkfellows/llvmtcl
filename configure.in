@@ -183,11 +183,9 @@ TEA_PROG_TCLSH
 #TEA_PROG_WISH
 
 #--------------------------------------------------------------------
+# Determine where LLVM (really llvm-config) is and check that it's
+# possible to retrieve the information from it that we really need.
 #--------------------------------------------------------------------
-AC_ARG_WITH(llvm-config,
-  [  --with-llvm-config=FILE],
-  [LLVMCONFIG=$withval],
-  [LLVMCONFIG=llvm-config])
 
 AC_ARG_WITH(llvm-config,
     AC_HELP_STRING([--with-llvm-config=FILE],
