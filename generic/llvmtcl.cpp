@@ -696,7 +696,8 @@ NamedStructTypeObjCmd(
 
     llvm::Type *rt;
     if (numTypes < 1) {
-	rt = llvm::StructType::create(llvm::getGlobalContext(), name);
+	rt = llvm::StructType::create(*llvm::unwrap(LLVMGetGlobalContext()),
+		name);
     } else {
 	llvm::ArrayRef<llvm::Type*> elements(llvm::unwrap(types),
 		(unsigned) numTypes);
