@@ -45,7 +45,7 @@ std::string GetRefName(std::string prefix)
     return os.str();
 }
 
-#include "llvmtcl-gen-map.c"
+#include "generated/llvmtcl-gen-map.h"
 
 static const char *const intrinsicNames[] = {
 #define GET_INTRINSIC_NAME_TABLE
@@ -577,7 +577,7 @@ LLVMGetBasicBlocksObjCmd(
     return TCL_OK;
 }
 
-#include "llvmtcl-gen.c"
+#include "generated/llvmtcl-gen.h"
 
 static int
 LLVMCallInitialisePackageFunction(
@@ -828,7 +828,7 @@ DLLEXPORT int Llvmtcl_Init(Tcl_Interp *interp)
     if (Tcl_PkgProvide(interp, PACKAGE_NAME, PACKAGE_VERSION) != TCL_OK)
 	return TCL_ERROR;
 
-#include "llvmtcl-gen-cmddef.c"
+#include "generated/llvmtcl-gen-cmddef.h"
     LLVMObjCmd("llvmtcl::CreateGenericValueOfTclInterp", LLVMCreateGenericValueOfTclInterpObjCmd);
     LLVMObjCmd("llvmtcl::CreateGenericValueOfTclObj", LLVMCreateGenericValueOfTclObjObjCmd);
     LLVMObjCmd("llvmtcl::GenericValueToTclObj", LLVMGenericValueToTclObjObjCmd);

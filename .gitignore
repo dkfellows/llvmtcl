@@ -9,5 +9,7 @@ config.log
 config.status
 pkgIndex.tcl
 Makefile
-generic/*-gen*.c
+/generic/generated/
 *.ll
+/.cproject
+/.settings/

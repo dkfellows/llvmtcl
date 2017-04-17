@@ -477,9 +477,11 @@ set f [open $srcdir/llvmtcl-gen.inp r]
 set ll [split [read $f] \n]
 close $f
 
-set cf [open $srcdir/generic/llvmtcl-gen.c w]
-set of [open $srcdir/generic/llvmtcl-gen-cmddef.c w]
-set mf [open $srcdir/generic/llvmtcl-gen-map.c w]
+set targetdir $srcdir/generic/generated
+catch {file mkdir $targetdir} 
+set cf [open $targetdir/llvmtcl-gen.h w]
+set of [open $targetdir/llvmtcl-gen-cmddef.h w]
+set mf [open $targetdir/llvmtcl-gen-map.h w]
 
 foreach l $ll {
     set l [string trim $l]
