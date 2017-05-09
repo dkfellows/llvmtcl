@@ -196,12 +196,6 @@ GetEngineFromObj(
     return TCL_OK;
 }
 
-static int search(const void *p1, const void *p2) {
-  const char *s1 = (const char *) p1;
-  const char *s2 = *(const char **) p2;
-  return strcmp(s1, s2);
-}
-
 static int
 GetLLVMIntrinsicIDFromObj(
     Tcl_Interp *interp,
@@ -209,18 +203,19 @@ GetLLVMIntrinsicIDFromObj(
     llvm::Intrinsic::ID &id)
 {
     const char *str = Tcl_GetString(obj);
-    void *ptr = bsearch(str, (const void *) intrinsicNames,
-	    sizeof(intrinsicNames)/sizeof(const char *),
-	    sizeof(const char *), search);
+    size_t num = sizeof(intrinsicNames)/sizeof(const char *);
 
-    if (ptr == NULL) {
-	Tcl_SetObjResult(interp, Tcl_ObjPrintf(
-		"expected LLVMIntrinsic but got \"%s\"", str));
-	return TCL_ERROR;
+    // Linear scan; only thing that works reliably...
+    for (size_t i=0 ; i<num ; i++) {
+	if (!strcmp(str, intrinsicNames[i])) {
+	    id = (llvm::Intrinsic::ID) (i+1);
+	    return TCL_OK;
+	}
     }
 
-    id = (llvm::Intrinsic::ID)((((const char**) ptr) - intrinsicNames) + 1);
-    return TCL_OK;
+    Tcl_SetObjResult(interp, Tcl_ObjPrintf(
+	    "expected LLVMIntrinsic but got \"%s\"", str));
+    return TCL_ERROR;
 }
 
 static Tcl_Obj *
