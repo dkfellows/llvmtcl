@@ -174,7 +174,8 @@ AR		= @AR@
 CFLAGS		= @CFLAGS@
 COMPILE		= $(CC) $(LLVMCFLAGS) $(DEFS) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
 
-APIFILES	= ${srcdir}/generic/llvmtcl-gen.c ${srcdir}/generic/llvmtcl-gen-cmddef.c ${srcdir}/generic/llvmtcl-gen-map.c
+GENDIR		= ${srcdir}/generic/generated
+APIFILES	= ${GENDIR}/llvmtcl-gen.h ${GENDIR}/llvmtcl-gen-cmddef.h ${GENDIR}/llvmtcl-gen-map.h
 
 #========================================================================
 # Start of user-definable TARGETS section
