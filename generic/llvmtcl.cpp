@@ -809,6 +809,43 @@ CreateModuleFromBitcodeCmd(
     return TCL_ERROR;
 }
 
+static int
+GarbageCollectUnusedFunctionsInModuleCmd(
+    ClientData clientData,
+    Tcl_Interp *interp,
+    int objc,
+    Tcl_Obj *const objv[])
+{
+    llvm::Module *module;
+
+    if (objc != 2) {
+	Tcl_WrongNumArgs(interp, 1, objv, "Module");
+	return TCL_ERROR;
+    }
+    if (GetModuleFromObj(interp, objv[1], module) != TCL_OK) {
+	return TCL_ERROR;
+    }
+
+    bool didDeletion;
+    do {
+	didDeletion = false;
+	std::vector<llvm::Function *> to_delete;
+	for (auto curFref = module->functions().begin(), 
+		endFref = module->functions().end(); 
+		curFref != endFref; ++curFref) {
+	    if (curFref->isDefTriviallyDead()) {
+		to_delete.push_back(curFref);
+	    }
+	}
+
+	for (auto f = to_delete.begin() ; f != to_delete.end() ; f++) {
+	    (*f)->eraseFromParent();
+	    didDeletion = true;
+	}
+    } while (didDeletion);
+    return TCL_OK;
+}
+
 #define LLVMObjCmd(tclName, cName) \
   Tcl_CreateObjCommand(interp, tclName, (Tcl_ObjCmdProc*)cName, (ClientData)NULL, (Tcl_CmdDeleteProc*)NULL);
 
@@ -845,6 +882,8 @@ DLLEXPORT int Llvmtcl_Init(Tcl_Interp *interp)
 	    CreateMCJITCompilerForModuleObjCmd);
     LLVMObjCmd("llvmtcl::GetHostTriple", GetHostTripleObjCmd);
     LLVMObjCmd("llvmtcl::CreateModuleFromBitcode", CreateModuleFromBitcodeCmd);
+    LLVMObjCmd("llvmtcl::GarbageCollectUnusedFunctionsInModule",
+	    GarbageCollectUnusedFunctionsInModuleCmd);
     // Debugging info support
     LLVMObjCmd("llvmtcl::DebugInfo::BuildDbgValue", BuildDbgValue);
     LLVMObjCmd("llvmtcl::DebugInfo::CreateBuilder", CreateDebugBuilder);
