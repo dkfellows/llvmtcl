@@ -462,6 +462,7 @@ proc gen_map {mf l} {
     puts $mf "    return TCL_OK;"
     puts $mf "\}"
     puts $mf "Tcl_Obj* Set${tp}AsObj(Tcl_Interp* interp, $tp ref) \{"
+    puts $mf "    if (!ref) return Tcl_NewObj();"
     puts $mf "    if (${tp}_refmap.find(ref) == ${tp}_refmap.end()) \{"
     puts $mf "        std::string nm = GetRefName(\"${tp}_\");"
     puts $mf "        ${tp}_map\[nm\] = ref;"
