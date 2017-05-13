@@ -11,7 +11,7 @@ REQUIREMENTS
 ============
 
 * Tcl 8.6
-* LLVM 3.7
+* LLVM 3.7 or 3.8
 
 CONTENTS
 ========
@@ -21,8 +21,6 @@ the sample extension.
 
     Makefile.in     Makefile template.  The configure script uses this file to
                     produce the final Makefile.
-    
-    README          This file.
     
     license.terms   License info for thie package.
     
@@ -69,7 +67,7 @@ the sample extension.
 
     llvmtcl.tcl     Scripts using the Tcl API to the llvm C API.
 
-    tests           Some tests for the package.
+    tests/          Some tests for the package.
     
     tclconfig/      This directory contains various template files that build
                     the configure script.  They should not need modification.
@@ -79,12 +77,14 @@ the sample extension.
     
        tcl.m4       Collection of Tcl autoconf macros.  Included by
                     aclocal.m4 to define SC_* macros.
+    
+    win/            Files used for building on Windows.
 
-UNIX BUILD
-==========
+UNIX BUILD (including OSX)
+==========================
 
 This is a C++ extension, so make sure to set the CC environment variable to a
-c++ compiler (e.g. g++).
+c++ compiler (e.g. clang++ or g++).
 
 Building under most UNIX systems is easy, just run the configure script
 and then run make. For more information about the build process, see
@@ -103,7 +103,7 @@ Add the llvm lib directory containing the llvm shared object files to the
 WINDOWS BUILD
 =============
 
-Not available.
+Not supported, but see the `win` directory.
 
 INSTALLATION
 ============
