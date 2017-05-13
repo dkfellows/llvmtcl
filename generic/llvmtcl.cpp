@@ -833,7 +833,7 @@ GarbageCollectUnusedFunctionsInModuleCmd(
 		endFref = module->functions().end(); 
 		curFref != endFref; ++curFref) {
 	    if (curFref->isDefTriviallyDead()) {
-		to_delete.push_back(curFref);
+		to_delete.push_back(&(*curFref));
 	    }
 	}
 
