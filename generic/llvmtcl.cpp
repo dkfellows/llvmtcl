@@ -829,18 +829,40 @@ GarbageCollectUnusedFunctionsInModuleCmd(
     do {
 	didDeletion = false;
 	std::vector<llvm::Function *> to_delete;
+
+	/*
+	 * Find functions that are not being used. CAREFUL! Must not delete
+	 * any functions that are defined by this module and which are
+	 * exported. But we can delete functions that are unreferenced and are
+	 * either internal or declarations that are brought in from outside.
+	 *
+	 * The deletion is done as a two-stage loop so that the iterator over
+	 * the list of functions is guaranteed to not have to handle
+	 * concurrent modification trickiness.
+	 */
+
 	for (auto curFref = module->functions().begin(), 
 		endFref = module->functions().end(); 
 		curFref != endFref; ++curFref) {
-	    if (curFref->isDefTriviallyDead()) {
-		to_delete.push_back(&(*curFref));
+	    auto &fn = *curFref;
+
+	    if (fn.user_empty() &&
+		    (fn.getVisibility() == llvm::GlobalValue::HiddenVisibility
+		    || fn.isDeclaration())) {
+		to_delete.push_back(&fn);
+		didDeletion = true;
 	    }
 	}
 
-	for (auto f = to_delete.begin() ; f != to_delete.end() ; f++) {
+	for (auto f = to_delete.begin() ; f != to_delete.end() ; ++f) {
 	    (*f)->eraseFromParent();
-	    didDeletion = true;
 	}
+
+	/*
+	 * Note: there's a finite number of functions to start with, so this
+	 * loop MUST terminate. But we must loop: deleting a function might
+	 * have made more functions become unreferenced.
+	 */
     } while (didDeletion);
     return TCL_OK;
 }
