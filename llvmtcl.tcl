@@ -6,9 +6,8 @@ namespace eval llvmtcl {
 	namespace ensemble create
     }
 
-    proc OptimizeModule {m optimizeLevel targetDataRef} {
+    proc OptimizeModule {m optimizeLevel} {
 	set pm [CreatePassManager]
-	AddTargetData $targetDataRef $pm
 	set bld [PassManagerBuilderCreate]
 	PassManagerBuilderSetOptLevel $bld $optimizeLevel
 	PassManagerBuilderSetDisableUnrollLoops $bld [expr {$optimizeLevel == 0}]
@@ -21,9 +20,8 @@ namespace eval llvmtcl {
 	DisposePassManager $pm
     }
 
-    proc OptimizeFunction {m f optimizeLevel targetDataRef} {
+    proc OptimizeFunction {m f optimizeLevel} {
 	set fpm [CreateFunctionPassManagerForModule $m]
-	AddTargetData $targetDataRef $fpm
 	set bld [PassManagerBuilderCreate]
 	PassManagerBuilderSetOptLevel $bld $optimizeLevel
 	PassManagerBuilderSetDisableUnrollLoops $bld [expr {$optimizeLevel == 0}]
@@ -39,18 +37,14 @@ namespace eval llvmtcl {
     }
 
     proc Optimize {m funcList} {
-	set td [CreateTargetData ""]
-	SetDataLayout $m [CopyStringRepOfTargetData $td]
 	foreach f $funcList {
-	    OptimizeFunction $m $f 3 $td
+	    OptimizeFunction $m $f 3
 	}
-	OptimizeModule $m 3 $td
+	OptimizeModule $m 3
     }
 
     proc Execute {m f args} {
 	SetTarget $m X86
-	set td [CreateTargetData "e"]
-	SetDataLayout $m [CopyStringRepOfTargetData $td]
 	lassign [CreateExecutionEngineForModule $m] rt EE msg
 	set largs {}
 	foreach arg $args {

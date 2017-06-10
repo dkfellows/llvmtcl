@@ -6,11 +6,14 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/Host.h"
-#if (LLVM_VERSION_MAJOR >=3 && LLVM_VERSION_MINOR >= 7)
+
+#include "version.h"
+#ifdef API_2
 #include "llvm/IR/PassManager.h"
-#else
+#else // !API_2
 #include "llvm/PassManager.h"
-#endif
+#endif // API_2
+
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/IR/Instructions.h"
@@ -691,7 +694,8 @@ NamedStructTypeObjCmd(
 
     llvm::Type *rt;
     if (numTypes < 1) {
-	rt = llvm::StructType::create(llvm::getGlobalContext(), name);
+	rt = llvm::StructType::create(*llvm::unwrap(LLVMGetGlobalContext()),
+		name);
     } else {
 	llvm::ArrayRef<llvm::Type*> elements(llvm::unwrap(types),
 		(unsigned) numTypes);
