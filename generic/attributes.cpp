@@ -64,7 +64,8 @@ static const AttributeMapper attrMap[] = {
     ATTRDEF(StackProtectStrong,	sspstrong),
     ATTRDEF(UWTable,		uwtable),
     ATTRDEF(ZExt,		zeroext),
-    {NULL}
+    {NULL,Attribute::NonNull}
+    //Any value will do, so long as the NULL is there
 };
 #undef ATTRDEF
 

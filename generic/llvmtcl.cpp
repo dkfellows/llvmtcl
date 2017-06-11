@@ -6,11 +6,14 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/Host.h"
-#if (LLVM_VERSION_MAJOR >=3 && LLVM_VERSION_MINOR >= 7)
+
+#include "version.h"
+#ifdef API_2
 #include "llvm/IR/PassManager.h"
-#else
+#else // !API_2
 #include "llvm/PassManager.h"
-#endif
+#endif // API_2
+
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/IR/Instructions.h"
@@ -45,7 +48,7 @@ std::string GetRefName(std::string prefix)
     return os.str();
 }
 
-#include "llvmtcl-gen-map.c"
+#include "generated/llvmtcl-gen-map.h"
 
 static const char *const intrinsicNames[] = {
 #define GET_INTRINSIC_NAME_TABLE
@@ -196,12 +199,6 @@ GetEngineFromObj(
     return TCL_OK;
 }
 
-static int search(const void *p1, const void *p2) {
-  const char *s1 = (const char *) p1;
-  const char *s2 = *(const char **) p2;
-  return strcmp(s1, s2);
-}
-
 static int
 GetLLVMIntrinsicIDFromObj(
     Tcl_Interp *interp,
@@ -209,18 +206,19 @@ GetLLVMIntrinsicIDFromObj(
     llvm::Intrinsic::ID &id)
 {
     const char *str = Tcl_GetString(obj);
-    void *ptr = bsearch(str, (const void *) intrinsicNames,
-	    sizeof(intrinsicNames)/sizeof(const char *),
-	    sizeof(const char *), search);
+    size_t num = sizeof(intrinsicNames)/sizeof(const char *);
 
-    if (ptr == NULL) {
-	Tcl_SetObjResult(interp, Tcl_ObjPrintf(
-		"expected LLVMIntrinsic but got \"%s\"", str));
-	return TCL_ERROR;
+    // Linear scan; only thing that works reliably...
+    for (size_t i=0 ; i<num ; i++) {
+	if (!strcmp(str, intrinsicNames[i])) {
+	    id = (llvm::Intrinsic::ID) (i+1);
+	    return TCL_OK;
+	}
     }
 
-    id = (llvm::Intrinsic::ID)((((const char**) ptr) - intrinsicNames) + 1);
-    return TCL_OK;
+    Tcl_SetObjResult(interp, Tcl_ObjPrintf(
+	    "expected LLVMIntrinsic but got \"%s\"", str));
+    return TCL_ERROR;
 }
 
 static Tcl_Obj *
@@ -577,7 +575,7 @@ LLVMGetBasicBlocksObjCmd(
     return TCL_OK;
 }
 
-#include "llvmtcl-gen.c"
+#include "generated/llvmtcl-gen.h"
 
 static int
 LLVMCallInitialisePackageFunction(
@@ -696,7 +694,8 @@ NamedStructTypeObjCmd(
 
     llvm::Type *rt;
     if (numTypes < 1) {
-	rt = llvm::StructType::create(llvm::getGlobalContext(), name);
+	rt = llvm::StructType::create(*llvm::unwrap(LLVMGetGlobalContext()),
+		name);
     } else {
 	llvm::ArrayRef<llvm::Type*> elements(llvm::unwrap(types),
 		(unsigned) numTypes);
@@ -813,6 +812,65 @@ CreateModuleFromBitcodeCmd(
     return TCL_ERROR;
 }
 
+static int
+GarbageCollectUnusedFunctionsInModuleCmd(
+    ClientData clientData,
+    Tcl_Interp *interp,
+    int objc,
+    Tcl_Obj *const objv[])
+{
+    llvm::Module *module;
+
+    if (objc != 2) {
+	Tcl_WrongNumArgs(interp, 1, objv, "Module");
+	return TCL_ERROR;
+    }
+    if (GetModuleFromObj(interp, objv[1], module) != TCL_OK) {
+	return TCL_ERROR;
+    }
+
+    bool didDeletion;
+    do {
+	didDeletion = false;
+	std::vector<llvm::Function *> to_delete;
+
+	/*
+	 * Find functions that are not being used. CAREFUL! Must not delete
+	 * any functions that are defined by this module and which are
+	 * exported. But we can delete functions that are unreferenced and are
+	 * either internal or declarations that are brought in from outside.
+	 *
+	 * The deletion is done as a two-stage loop so that the iterator over
+	 * the list of functions is guaranteed to not have to handle
+	 * concurrent modification trickiness.
+	 */
+
+	for (auto curFref = module->functions().begin(), 
+		endFref = module->functions().end(); 
+		curFref != endFref; ++curFref) {
+	    auto &fn = *curFref;
+
+	    if (fn.user_empty() &&
+		    (fn.getVisibility() == llvm::GlobalValue::HiddenVisibility
+		    || fn.isDeclaration())) {
+		to_delete.push_back(&fn);
+		didDeletion = true;
+	    }
+	}
+
+	for (auto f = to_delete.begin() ; f != to_delete.end() ; ++f) {
+	    (*f)->eraseFromParent();
+	}
+
+	/*
+	 * Note: there's a finite number of functions to start with, so this
+	 * loop MUST terminate. But we must loop: deleting a function might
+	 * have made more functions become unreferenced.
+	 */
+    } while (didDeletion);
+    return TCL_OK;
+}
+
 #define LLVMObjCmd(tclName, cName) \
   Tcl_CreateObjCommand(interp, tclName, (Tcl_ObjCmdProc*)cName, (ClientData)NULL, (Tcl_CmdDeleteProc*)NULL);
 
@@ -828,7 +886,7 @@ DLLEXPORT int Llvmtcl_Init(Tcl_Interp *interp)
     if (Tcl_PkgProvide(interp, PACKAGE_NAME, PACKAGE_VERSION) != TCL_OK)
 	return TCL_ERROR;
 
-#include "llvmtcl-gen-cmddef.c"
+#include "generated/llvmtcl-gen-cmddef.h"
     LLVMObjCmd("llvmtcl::CreateGenericValueOfTclInterp", LLVMCreateGenericValueOfTclInterpObjCmd);
     LLVMObjCmd("llvmtcl::CreateGenericValueOfTclObj", LLVMCreateGenericValueOfTclObjObjCmd);
     LLVMObjCmd("llvmtcl::GenericValueToTclObj", LLVMGenericValueToTclObjObjCmd);
@@ -849,6 +907,8 @@ DLLEXPORT int Llvmtcl_Init(Tcl_Interp *interp)
 	    CreateMCJITCompilerForModuleObjCmd);
     LLVMObjCmd("llvmtcl::GetHostTriple", GetHostTripleObjCmd);
     LLVMObjCmd("llvmtcl::CreateModuleFromBitcode", CreateModuleFromBitcodeCmd);
+    LLVMObjCmd("llvmtcl::GarbageCollectUnusedFunctionsInModule",
+	    GarbageCollectUnusedFunctionsInModuleCmd);
     // Debugging info support
     LLVMObjCmd("llvmtcl::DebugInfo::BuildDbgValue", BuildDbgValue);
     LLVMObjCmd("llvmtcl::DebugInfo::CreateBuilder", CreateDebugBuilder);
@@ -859,6 +919,7 @@ DLLEXPORT int Llvmtcl_Init(Tcl_Interp *interp)
     LLVMObjCmd("llvmtcl::DebugInfo::Location", DefineLocation);
     LLVMObjCmd("llvmtcl::DebugInfo::UnspecifiedType", DefineUnspecifiedType);
     LLVMObjCmd("llvmtcl::DebugInfo::AliasType", DefineAliasType);
+    LLVMObjCmd("llvmtcl::DebugInfo::ArrayType", DefineArrayType);
     LLVMObjCmd("llvmtcl::DebugInfo::BasicType", DefineBasicType);
     LLVMObjCmd("llvmtcl::DebugInfo::PointerType", DefinePointerType);
     LLVMObjCmd("llvmtcl::DebugInfo::StructType", DefineStructType);
@@ -866,8 +927,6 @@ DLLEXPORT int Llvmtcl_Init(Tcl_Interp *interp)
     LLVMObjCmd("llvmtcl::DebugInfo::Parameter", DefineParameter);
     LLVMObjCmd("llvmtcl::DebugInfo::Local", DefineLocal);
     LLVMObjCmd("llvmtcl::DebugInfo::Function", DefineFunction);
-    LLVMObjCmd("llvmtcl::DebugInfo::Function.SetVariables",
-	    ReplaceFunctionVariables);
     LLVMObjCmd("llvmtcl::DebugInfo::Instruction.SetLocation",
 	    SetInstructionLocation);
     LLVMObjCmd("llvmtcl::DebugInfo::AttachToFunction", AttachToFunction);
@@ -883,6 +942,9 @@ DLLEXPORT int Llvmtcl_Init(Tcl_Interp *interp)
 
     LLVMInitializeNativeTarget();
     LLVMInitializeNativeAsmPrinter();
+    if (Tcl_SetVar(interp, "::llvmtcl::llvm_version", LLVM_VERSION_STRING,
+	    TCL_GLOBAL_ONLY|TCL_LEAVE_ERR_MSG) == NULL)
+	return TCL_ERROR;
     return TCL_OK;
 }
 

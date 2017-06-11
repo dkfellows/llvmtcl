@@ -173,7 +173,7 @@ PROJECT = llvmtcl
 
 !if [echo REM = This file is generated from Makefile.vc > versions.vc]
 !endif
-# get project version from row "AC_INIT([llvmtcl], [3.6])"
+# get project version from row "AC_INIT([llvmtcl], [3.7])"
 !if [echo DOTVERSION = \>> versions.vc] \
    && [nmakehlp -V ..\configure.in llvmtcl >> versions.vc]
 !endif
@@ -187,7 +187,7 @@ VERSION         = $(DOTVERSION:.=)
 STUBPREFIX      = $(PROJECT)stub
 
 DLLOBJS = $(TMP_DIR)\llvmtcl.obj 
-	
+
 PRJSTUBOBJS =
 
 PRJHEADERS =
@@ -354,7 +354,7 @@ install-binaries: install-lib-binaries
 generate-api: $(APIFILES)
 $(APIFILES) : $(ROOT)\llvmtcl-gen.inp $(ROOT)\llvmtcl-gen.tcl
 			@$(TCLSH) $(ROOT)\llvmtcl-gen.tcl
-			
+
 binaries: setup generate-api $(PRJLIB)
 
 # See <tcl>/win/coffbase.txt for extension base addresses.
@@ -396,7 +396,7 @@ shell: setup $(PROJECT)
 setup:
 	@if not exist $(OUT_DIR)\nul mkdir $(OUT_DIR)
 	@if not exist $(TMP_DIR)\nul mkdir $(TMP_DIR)
-	
+
 #---------------------------------------------------------------------
 # Implicit rules
 #---------------------------------------------------------------------
@@ -408,7 +408,7 @@ $<
 
 $(TMP_DIR)\llvmtcl.obj: $(GENERICDIR)\llvmtcl.cpp
 	$(cc32) $(TCL_CFLAGS) -Fo$(TMP_DIR)\llvmtcl $(GENERICDIR)\llvmtcl.cpp
-	
+
 #{$(GENERICDIR)}.cpp{$(TMP_DIR)}.obj:
 #	@echo cxx
 #	$(cc32) $(TCL_CFLAGS) -Fo$(TMP_DIR)\ @<<
@@ -435,7 +435,7 @@ $<
 	-d STATIC_BUILD \
 !endif
 	$<
-	
+
 .PHONY: $(OUT_DIR)\pkgIndex.tcl
 
 $(OUT_DIR)\pkgIndex.tcl: $(ROOT)\pkgIndex.tcl.in
@@ -465,7 +465,7 @@ install-libraries:
 	@$(CPY) $(ROOT)\optimise.tcl "$(SCRIPT_INSTALL_DIR)"
 	@$(CPY) $(OUT_DIR)\pkgIndex.tcl "$(SCRIPT_INSTALL_DIR)"
 	@$(CPY) $(PRJLIB) "$(SCRIPT_INSTALL_DIR)"
-	
+
 install-docs:
 	@echo Installing documentation files to '$(DOC_INSTALL_DIR)'
 	@if exist $(DOCDIR) $(CPY) $(DOCDIR)\*.n "$(DOC_INSTALL_DIR)"

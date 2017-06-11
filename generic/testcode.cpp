@@ -2,6 +2,7 @@
 #include "tclTomMath.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
+#include "llvm-c/Core.h"
 #include "llvmtcl.h"
 
 using namespace llvm;
@@ -98,8 +99,9 @@ LLVMAddLLVMTclCommandsObjCmd(
     if (GetModuleFromObj(interp, objv[2], mod) != TCL_OK)
         return TCL_ERROR;
 
-    auto void_type = Type::getVoidTy(getGlobalContext());
-    auto ptr_type = Type::getInt8PtrTy(getGlobalContext());
+    auto contextPtr = unwrap(LLVMGetGlobalContext());
+    auto void_type = Type::getVoidTy(*contextPtr);
+    auto ptr_type = Type::getInt8PtrTy(*contextPtr);
     FunctionType *func_type;
 
     func_type = FunctionType::get(void_type, false);

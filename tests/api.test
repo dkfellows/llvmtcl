@@ -37,16 +37,14 @@ tcltest::test api-1 {build an example with llvm C api wrapper and execute it} -b
     }
     # Execute
     llvmtcl SetTarget $m x86
-    set td [llvmtcl CreateTargetData "e"]
-    llvmtcl SetDataLayout $m [llvmtcl CopyStringRepOfTargetData $td]
     lassign [llvmtcl CreateExecutionEngineForModule $m] rt EE msg
     set i [llvmtcl CreateGenericValueOfInt [llvmtcl Int32Type] 4 0]
     set res [llvmtcl RunFunction $EE $plus10 $i]
     set result {}
     lappend result [llvmtcl GenericValueToInt $res 0]
     # Optimize
-    llvmtcl OptimizeFunction $m $plus10 3 $td
-    llvmtcl OptimizeModule $m 3 $td
+    llvmtcl OptimizeFunction $m $plus10 3
+    llvmtcl OptimizeModule $m 3
     # Execute optimized code
     set res [llvmtcl RunFunction $EE $plus10 $i]
     lappend result [llvmtcl GenericValueToInt $res 0]
@@ -108,8 +106,6 @@ tcltest::test api-2 {build an example with llvm C api wrapper and execute it} -b
     }
     # Run the fac and fac10 functions
     llvmtcl SetTarget $m x86
-    set td [llvmtcl CreateTargetData "e"]
-    llvmtcl SetDataLayout $m [llvmtcl CopyStringRepOfTargetData $td]
     lassign [llvmtcl CreateExecutionEngineForModule $m] rt EE msg
     set i [llvmtcl CreateGenericValueOfInt [llvmtcl Int32Type] 5 0]
     set res [llvmtcl RunFunction $EE $fac $i]
@@ -119,9 +115,9 @@ tcltest::test api-2 {build an example with llvm C api wrapper and execute it} -b
     lappend result [llvmtcl GenericValueToInt $res 0]
     # Optimize functions and module
     for {set t 0} {$t < 10} {incr t} {
-	llvmtcl OptimizeFunction $m $fac 3 $td
-	llvmtcl OptimizeFunction $m $fac10 3 $td
-	llvmtcl OptimizeModule $m 3 $td
+	llvmtcl OptimizeFunction $m $fac 3
+	llvmtcl OptimizeFunction $m $fac10 3
+	llvmtcl OptimizeModule $m 3
     }
     set res [llvmtcl RunFunction $EE $fac $i]
     lappend result [llvmtcl GenericValueToInt $res 0]

@@ -309,19 +309,20 @@ proc gen_enum {cf l} {
     set nm [string trim $nm]
     set pfx [string length [tcl::prefix longest $vals ""]]
     set sfx [string length [tcl::prefix longest [lmap val $vals {string reverse $val}] ""]]
-    puts $cf "
+    set toks [lmap val $vals {tcltoken $val $pfx $sfx}]
+
+    puts $cf [string trim [subst {
 int Get${nm}FromObj(Tcl_Interp* interp, Tcl_Obj* obj, $nm& e) {
     static std::map<std::string, $nm> s2e;
-    if (s2e.size() == 0) {"
-    foreach val $vals {
-	puts $cf "        s2e\[[tcltoken $val $pfx $sfx]\] = $val;"
-	puts "        s2e\[[tcltoken $val $pfx $sfx]\] = $val;"
+    if (s2e.size() == 0) {
+[join [lmap val $vals token $toks {string trimright [subst {
+        s2e\[$token\] = $val;
+}} \n}] \n]
     }
-    puts $cf "    }
     std::string s = Tcl_GetStringFromObj(obj, 0);
     if (s2e.find(s) == s2e.end()) {
         std::ostringstream os;
-        os << \"expected $nm but got '\" << s << \"'\";
+        os << \"expected $nm but got \\\"\" << s << \"\\\"\";
         Tcl_SetObjResult(interp, Tcl_NewStringObj(os.str().c_str(), -1));
         return TCL_ERROR;
     }
@@ -330,23 +331,24 @@ int Get${nm}FromObj(Tcl_Interp* interp, Tcl_Obj* obj, $nm& e) {
 }
 Tcl_Obj* Set${nm}AsObj(Tcl_Interp* interp, $nm e) {
     static std::map<$nm, std::string> e2s;
-    if (e2s.size() == 0) {"
-    foreach val $vals {
-	puts $cf "        e2s\[$val\] = [tcltoken $val $pfx $sfx];"
+    if (e2s.size() == 0) {
+[join [lmap val $vals token $toks {string trimright [subst {
+        e2s\[$val\] = $token;
+}} \n}] \n]
     }
-    puts $cf "    }
     std::string s;
     if (e2s.find(e) == e2s.end())
         s = \"<unknown $nm>\";
     else
         s = e2s\[e\];
     return Tcl_NewStringObj(s.c_str(), -1);
-}"
+}
+}] "\n"]
 }
 
 proc gen_map {mf l} {
     set tp [lindex [string trim $l " ;"] end]
-    puts $mf "
+    puts $mf [string trim [subst -nocommands {
 static std::map<std::string, $tp> ${tp}_map;
 static std::map<$tp, std::string> ${tp}_refmap;
 int Get${tp}FromObj(Tcl_Interp* interp, Tcl_Obj* obj, $tp& ref) {
@@ -354,11 +356,11 @@ int Get${tp}FromObj(Tcl_Interp* interp, Tcl_Obj* obj, $tp& ref) {
     std::string refName = Tcl_GetStringFromObj(obj, 0);
     if (${tp}_map.find(refName) == ${tp}_map.end()) {
         std::ostringstream os;
-        os << \"expected $tp but got '\" << refName << \"'\";
+        os << "expected $tp but got \"" << refName << "\"";
         Tcl_SetObjResult(interp, Tcl_NewStringObj(os.str().c_str(), -1));
         return TCL_ERROR;
     }
-    ref = ${tp}_map\[refName\];
+    ref = ${tp}_map[refName];
     return TCL_OK;
 }
 int GetListOf${tp}FromObj(Tcl_Interp* interp, Tcl_Obj* obj, $tp*& refs, int& count) {
@@ -367,29 +369,31 @@ int GetListOf${tp}FromObj(Tcl_Interp* interp, Tcl_Obj* obj, $tp*& refs, int& cou
     Tcl_Obj** objs = 0;
     if (Tcl_ListObjGetElements(interp, obj, &count, &objs) != TCL_OK) {
         std::ostringstream os;
-        os << \"expected list of types but got \\\"\" << Tcl_GetStringFromObj(obj, 0) << \"\\\"\";
+        os << "expected list of types but got \"" << Tcl_GetStringFromObj(obj, 0) << "\"";
         Tcl_SetObjResult(interp, Tcl_NewStringObj(os.str().c_str(), -1));
         return TCL_ERROR;
     }
     if (count == 0)
         return TCL_OK;
-    refs = new $tp\[count\];
-    for(int i =0; i < count; i++) {
-        if (Get${tp}FromObj(interp, objs\[i\], refs\[i\])) {
-            delete \[\] refs;
+    refs = new $tp[count];
+    for(int i = 0; i < count; i++) {
+        if (Get${tp}FromObj(interp, objs[i], refs[i])) {
+            delete [] refs;
             return TCL_ERROR;
         }
     }
     return TCL_OK;
 }
 Tcl_Obj* Set${tp}AsObj(Tcl_Interp* interp, $tp ref) {
+    if (!ref) return Tcl_NewObj();
     if (${tp}_refmap.find(ref) == ${tp}_refmap.end()) {
-        std::string nm = GetRefName(\"${tp}_\");
-        ${tp}_map\[nm\] = ref;
-        ${tp}_refmap\[ref\] = nm;
+        std::string nm = GetRefName("${tp}_");
+        ${tp}_map[nm] = ref;
+        ${tp}_refmap[ref] = nm;
     }
-    return Tcl_NewStringObj(${tp}_refmap\[ref\].c_str(), -1);
-}"
+    return Tcl_NewStringObj(${tp}_refmap[ref].c_str(), -1);
+}
+}] "\n"]
 }
 
 set srcdir [file dirname [info script]]
@@ -398,9 +402,11 @@ set f [open $srcdir/llvmtcl-gen.inp r]
 set ll [split [read $f] \n]
 close $f
 
-set cf [open $srcdir/generic/llvmtcl-gen.c w]
-set of [open $srcdir/generic/llvmtcl-gen-cmddef.c w]
-set mf [open $srcdir/generic/llvmtcl-gen-map.c w]
+set targetdir $srcdir/generic/generated
+catch {file mkdir $targetdir} 
+set cf [open $targetdir/llvmtcl-gen.h w]
+set of [open $targetdir/llvmtcl-gen-cmddef.h w]
+set mf [open $targetdir/llvmtcl-gen-map.h w]
 
 foreach l $ll {
     set l [string trim $l]

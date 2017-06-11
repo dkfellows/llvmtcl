@@ -3,6 +3,13 @@
 #include "llvm/IR/DIBuilder.h"
 #include "llvm-c/Core.h"
 #include "llvmtcl.h"
+#include "version.h"
+
+#ifdef API_4
+#define NO_FLAGS DINode::FlagZero
+#else
+#define NO_FLAGS ((unsigned) 0)
+#endif // API_4
 
 using namespace llvm;
 
@@ -10,6 +17,9 @@ static std::map<std::string, MDNode*> Metadata_map;
 static std::map<MDNode*, std::string> Metadata_refmap;
 static std::map<std::string, DIBuilder*> Builder_map;
 static std::map<DIBuilder*, std::string> Builder_refmap;
+
+#define ALIGN_SIZE(size) \
+    (((size) + sizeof(long) - 1) &~ (sizeof(long) - 1))
 
 /*
  * ----------------------------------------------------------------------
@@ -224,8 +234,13 @@ DefineCompileUnit(
     std::string flags = "";
     unsigned runtimeVersion = 0;
 
-    auto val = builder->createCompileUnit(lang, file, dir, producer, true,
-	    flags, runtimeVersion);
+    auto val = builder->createCompileUnit(lang,
+#ifdef API_4
+	    builder->createFile(file, dir),
+#else // !API_4
+	    file, dir,
+#endif //API_4
+	    producer, true, flags, runtimeVersion);
 
     Tcl_SetObjResult(interp, NewMetadataObj(val, "CompileUnit"));
     return TCL_OK;
@@ -339,7 +354,11 @@ DefineNamespace(
     if (Tcl_GetIntFromObj(interp, objv[5], &line) != TCL_OK)
 	return TCL_ERROR;
 
-    auto val = builder->createNameSpace(scope, name, file, line);
+    auto val = builder->createNameSpace(scope, name, file, line
+#ifdef API_4
+	    , false
+#endif // API_4
+	    );
 
     Tcl_SetObjResult(interp, NewMetadataObj(val, "Namespace"));
     return TCL_OK;
@@ -407,14 +426,20 @@ DefineBasicType(
     if (GetDIBuilderFromObj(interp, objv[1], builder) != TCL_OK)
 	return TCL_ERROR;
     std::string name = Tcl_GetString(objv[2]);
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-variable"
     int size, align = 0, dwarfTypeCode;
     if (Tcl_GetIntFromObj(interp, objv[3], &size) != TCL_OK)
 	return TCL_ERROR;
     if (Tcl_GetIntFromObj(interp, objv[4], &dwarfTypeCode) != TCL_OK)
 	return TCL_ERROR;
 
-    auto val = builder->createBasicType(name,
-	    (uint64_t) size, (uint64_t) align, (unsigned) dwarfTypeCode);
+    auto val = builder->createBasicType(name, (uint64_t) size,
+#ifndef API_4
+					(uint64_t) align,
+#endif // !API_4
+					(unsigned) dwarfTypeCode);
+#pragma clang diagnostic pop
 
     Tcl_SetObjResult(interp, NewMetadataObj(val, "BasicType"));
     return TCL_OK;
@@ -489,7 +514,7 @@ DefineStructType(
     DIFile *file;
     if (GetMetadataFromObj(interp, objv[4], "file", file) != TCL_OK)
 	return TCL_ERROR;
-    unsigned flags = 0, align = 0;
+    unsigned align = 0;
     int size, line;
     if (Tcl_GetIntFromObj(interp, objv[5], &line) != TCL_OK)
 	return TCL_ERROR;
@@ -504,7 +529,7 @@ DefineStructType(
     }
 
     auto val = builder->createStructType(scope, name, file, (unsigned) line,
-	    (uint64_t) size, align, flags, nullptr,
+	    (uint64_t) size, align, NO_FLAGS, nullptr,
 	    builder->getOrCreateArray(elements));
 
     Tcl_SetObjResult(interp, NewMetadataObj(val, "StructType"));
@@ -548,7 +573,10 @@ DefineFunctionType(
 	elements.push_back(type);
     }
 
-    auto val = builder->createSubroutineType(file,
+    auto val = builder->createSubroutineType(
+#ifndef API_3
+	    file,
+#endif // API_3
 	    builder->getOrCreateTypeArray(elements));
 
     Tcl_SetObjResult(interp, NewMetadataObj(val, "FunctionType"));
@@ -604,6 +632,50 @@ DefineAliasType(
 /*
  * ----------------------------------------------------------------------
  *
+ * DefineArrayType --
+ *
+ *	Defines an array type.
+ *
+ * ----------------------------------------------------------------------
+ */
+
+int
+DefineArrayType(
+    ClientData clientData,
+    Tcl_Interp *interp,
+    int objc,
+    Tcl_Obj *const objv[])
+{
+    if (objc != 5) {
+	Tcl_WrongNumArgs(interp, 1, objv,
+		"DIBuilder type elementCount elementByteSize");
+	return TCL_ERROR;
+    }
+
+    DIBuilder *builder;
+    if (GetDIBuilderFromObj(interp, objv[1], builder) != TCL_OK)
+	return TCL_ERROR;
+    DIType *type;
+    if (GetMetadataFromObj(interp, objv[2], "type", type) != TCL_OK)
+	return TCL_ERROR;
+    int cnt, sz;
+    if (Tcl_GetIntFromObj(interp, objv[3], &cnt) != TCL_OK)
+	return TCL_ERROR;
+    if (Tcl_GetIntFromObj(interp, objv[4], &sz) != TCL_OK)
+	return TCL_ERROR;
+
+    SmallVector<Metadata *, 4> subscripts;
+    subscripts.push_back(builder->getOrCreateSubrange(0, cnt));
+    auto val = builder->createArrayType(cnt * sz, ALIGN_SIZE(cnt * sz) * NBBY,
+	    type, builder->getOrCreateArray(subscripts));
+
+    Tcl_SetObjResult(interp, NewMetadataObj(val, "ArrayType"));
+    return TCL_OK;
+}
+
+/*
+ * ----------------------------------------------------------------------
+ *
  * DefineParameter --
  *
  *	Defines the arguments as parameter variables.
@@ -627,7 +699,7 @@ DefineParameter(
     DIBuilder *builder;
     if (GetDIBuilderFromObj(interp, objv[1], builder) != TCL_OK)
 	return TCL_ERROR;
-    DIScope *scope;
+    DISubprogram *scope;
     if (GetMetadataFromObj(interp, objv[2], "scope", scope) != TCL_OK)
 	return TCL_ERROR;
     std::string name = Tcl_GetString(objv[3]);
@@ -648,15 +720,15 @@ DefineParameter(
     if (GetMetadataFromObj(interp, objv[7], "type", type) != TCL_OK)
 	return TCL_ERROR;
 
-#if (LLVM_VERSION_MAJOR >=3 && LLVM_VERSION_MINOR > 7)
+#ifdef API_3
     auto val = builder->createParameterVariable(scope, name,
-	    (unsigned) argIndex, file, (unsigned) line, type);
+	    (unsigned) argIndex, file, (unsigned) line, type, true);
 #else
     // This API was deprecated (and made private) after 3.7
     auto val = builder->createLocalVariable(
 	    llvm::dwarf::DW_TAG_arg_variable, scope, name, file,
-	    (unsigned) line, type, false, 0, (unsigned) argIndex);
-#endif
+	    (unsigned) line, type, true, 0, (unsigned) argIndex);
+#endif // API_3
 
     Tcl_SetObjResult(interp, NewMetadataObj(val, "Variable"));
     return TCL_OK;
@@ -688,7 +760,7 @@ DefineLocal(
     DIBuilder *builder;
     if (GetDIBuilderFromObj(interp, objv[1], builder) != TCL_OK)
 	return TCL_ERROR;
-    DIScope *scope;
+    DILocalScope *scope;
     if (GetMetadataFromObj(interp, objv[2], "scope", scope) != TCL_OK)
 	return TCL_ERROR;
     std::string name = Tcl_GetString(objv[3]);
@@ -702,15 +774,15 @@ DefineLocal(
     if (GetMetadataFromObj(interp, objv[6], "type", type) != TCL_OK)
 	return TCL_ERROR;
 
-#if (LLVM_VERSION_MAJOR >=3 && LLVM_VERSION_MINOR > 7)
+#ifdef API_3
     auto val = builder->createAutoVariable(scope, name,
-	    file, (unsigned) line, type);
+	    file, (unsigned) line, type, true);
 #else
     // This API was deprecated (and made private) after 3.7
     auto val = builder->createLocalVariable(
 	    dwarf::DW_TAG_auto_variable, scope, name, file,
-	    (unsigned) line, type);
-#endif
+	    (unsigned) line, type, true);
+#endif // API_3
 
     Tcl_SetObjResult(interp, NewMetadataObj(val, "Variable"));
     return TCL_OK;
@@ -756,11 +828,10 @@ DefineFunction(
     DISubroutineType *type;
     if (GetMetadataFromObj(interp, objv[7], "subroutine type", type) != TCL_OK)
 	return TCL_ERROR;
-    unsigned flags = 0;
     bool isOpt = true, isLocal = true, isDef = true;
 
     auto val = builder->createFunction(scope, name, linkName, file, line,
-	    type, isLocal, isDef, line, flags, isOpt);
+	    type, isLocal, isDef, line, NO_FLAGS, isOpt);
 
     Tcl_SetObjResult(interp, NewMetadataObj(val, "Function"));
     return TCL_OK;
@@ -771,7 +842,7 @@ DefineFunction(
  *
  * BuildDbgValue --
  *
- *	Creates a call to llvm.dbc.value and adds it the given basic block.
+ *	Creates a call to llvm.dbg.value and adds it the given basic block.
  *
  * ----------------------------------------------------------------------
  */
@@ -811,52 +882,6 @@ BuildDbgValue(
 	    location, b->GetInsertBlock());
 
     Tcl_SetObjResult(interp, NewValueObj(inst));
-    return TCL_OK;
-}
-
-/*
- * ----------------------------------------------------------------------
- *
- * ClearFunctionVariables --
- *
- *	Removes the temporary metadata associated with a function's variables.
- *	This is critical because otherwise the validation of the module fails.
- *
- * ----------------------------------------------------------------------
- */
-
-int
-ReplaceFunctionVariables(
-    ClientData clientData,
-    Tcl_Interp *interp,
-    int objc,
-    Tcl_Obj *const objv[])
-{
-    if (objc < 2) {
-	Tcl_WrongNumArgs(interp, 1, objv, "function variable...");
-	return TCL_ERROR;
-    }
-
-    DISubprogram *function;
-    if (GetMetadataFromObj(interp, objv[1], "function", function) != TCL_OK)
-	return TCL_ERROR;
-    std::vector<Metadata*> variables;
-    for (int i=2 ; i<objc ; i++) {
-	DILocalVariable *var;
-	if (GetMetadataFromObj(interp, objv[i], "variable", var) != TCL_OK)
-	    return TCL_ERROR;
-	variables.push_back(var);
-    }
-
-    auto vars = function->getVariables();
-    if (!vars->isTemporary()) {
-	Tcl_SetObjResult(interp, Tcl_NewStringObj(
-		"can only replace variable list when temporary", -1));
-	return TCL_ERROR;
-    }
-
-    vars->replaceAllUsesWith(MDNode::get(vars->getContext(), variables));
-    function->resolveCycles();
     return TCL_OK;
 }
 

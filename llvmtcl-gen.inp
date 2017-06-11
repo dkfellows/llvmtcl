@@ -1,17 +1,16 @@
 // -*- c++ -*-
-typedef LLVMBuilderRef;
-typedef LLVMTypeRef;
-typedef LLVMValueRef;
-typedef LLVMBasicBlockRef;
-//typedef LLVMContextRef;
-//typedef LLVMTypeHandleRef;
-typedef LLVMModuleRef;
-//typedef LLVMUseRef;
-typedef LLVMExecutionEngineRef;
-typedef LLVMGenericValueRef;
-typedef LLVMPassManagerRef;
-typedef LLVMPassManagerBuilderRef;
-typedef LLVMTargetDataRef;
+typedef LLVMBuilderRef
+typedef LLVMTypeRef
+typedef LLVMValueRef
+typedef LLVMBasicBlockRef
+//typedef LLVMContextRef
+//typedef LLVMTypeHandleRef
+typedef LLVMModuleRef
+//typedef LLVMUseRef
+typedef LLVMExecutionEngineRef
+typedef LLVMGenericValueRef
+typedef LLVMPassManagerRef
+typedef LLVMPassManagerBuilderRef
 
 enum {LLVMVoidTypeKind, LLVMHalfTypeKind, LLVMFloatTypeKind, LLVMDoubleTypeKind, LLVMX86_FP80TypeKind, LLVMFP128TypeKind, LLVMPPC_FP128TypeKind, LLVMLabelTypeKind, LLVMIntegerTypeKind, LLVMFunctionTypeKind, LLVMStructTypeKind, LLVMArrayTypeKind, LLVMPointerTypeKind, LLVMVectorTypeKind, LLVMMetadataTypeKind} LLVMTypeKind;
 //enum {LLVMZExtAttribute, LLVMSExtAttribute, LLVMNoReturnAttribute, LLVMInRegAttribute, LLVMStructRetAttribute, LLVMNoUnwindAttribute, LLVMNoAliasAttribute, LLVMByValAttribute, LLVMNestAttribute, LLVMReadNoneAttribute, LLVMReadOnlyAttribute, LLVMNoInlineAttribute, LLVMAlwaysInlineAttribute, LLVMOptimizeForSizeAttribute, LLVMStackProtectAttribute, LLVMStackProtectReqAttribute, LLVMAlignment, LLVMNoCaptureAttribute, LLVMNoRedZoneAttribute, LLVMNoImplicitFloatAttribute, LLVMNakedAttribute, LLVMInlineHintAttribute, LLVMStackAlignment, LLVMReturnsTwice, LLVMUWTable, LLVMNonLazyBind} LLVMAttribute;
@@ -459,10 +458,6 @@ LLVMBool LLVMVerifyFunction(LLVMValueRef Fn, LLVMVerifierFailureAction Action);
 
 //void LLVMViewFunctionCFG(LLVMValueRef Fn);
 //void LLVMViewFunctionCFGOnly(LLVMValueRef Fn);
-
-LLVMTargetDataRef LLVMCreateTargetData(const char *StringRep);
-void LLVMAddTargetData(LLVMTargetDataRef, LLVMPassManagerRef);
-std::string LLVMCopyStringRepOfTargetData(LLVMTargetDataRef);
 
 LLVMPassManagerBuilderRef LLVMPassManagerBuilderCreate(void);
 void LLVMPassManagerBuilderDispose(LLVMPassManagerBuilderRef);
