@@ -11,7 +11,7 @@ REQUIREMENTS
 ============
 
 * Tcl 8.6
-* LLVM 3.7 or 3.8
+* LLVM 3.7, 3.8, 3.9 or 4.0 (4.0 is recommended for performance reasons on large functions)
 
 CONTENTS
 ========
@@ -64,6 +64,8 @@ the sample extension.
                     intrinsics, needed on some platforms and with some linkers.
 
        testcode.cpp Code only used for testing purposes.
+
+       version.h    Simplifies LLVM API version detection.
 
     llvmtcl.tcl     Scripts using the Tcl API to the llvm C API.
 
@@ -150,3 +152,5 @@ EXAMPLES
 `examples/tebc.tcl` - Example converting Tcl into LLVM
 
 `examples/ffidle.tcl` - Example calling functions in shared libraries
+
+For a more extensive example of use, see the tclquadcode project: http://core.tcl.tk/tclquadcode/
