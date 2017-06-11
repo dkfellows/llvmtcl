@@ -942,6 +942,9 @@ DLLEXPORT int Llvmtcl_Init(Tcl_Interp *interp)
 
     LLVMInitializeNativeTarget();
     LLVMInitializeNativeAsmPrinter();
+    if (Tcl_SetVar(interp, "::llvmtcl::llvm_version", LLVM_VERSION_STRING,
+	    TCL_GLOBAL_ONLY|TCL_LEAVE_ERR_MSG) == NULL)
+	return TCL_ERROR;
     return TCL_OK;
 }
 
