@@ -27,6 +27,7 @@ LLVMCFLAGS = `${LLVMCONFIG} --cxxflags`
 LLVMLFLAGS = `${LLVMCONFIG} --ldflags`
 LLVMLIBS = `${LLVMCONFIG} --libs ${LLVMCOMPONENTS}`
 LLVMSYSTEMLIBS = `${LLVMCONFIG} --system-libs ${LLVMCOMPONENTS}`
+LLVMTARGET = `${LLVMCONFIG} --host-target`
 
 #========================================================================
 # Nothing of the variables below this line should need to be changed.
@@ -168,7 +169,7 @@ DEFS		= @DEFS@ $(PKG_CFLAGS)
 CONFIG_CLEAN_FILES = Makefile pkgIndex.tcl
 CLEANFILES	= @CLEANFILES@
 
-CPPFLAGS	= @CPPFLAGS@
+CPPFLAGS	= @CPPFLAGS@ "-DLLVMTCL_TARGET=\"${LLVMTARGET}\""
 LIBS		= @PKG_LIBS@ @LIBS@ $(LLVMLIBS) $(LLVMLFLAGS) $(LLVMSYSTEMLIBS)
 AR		= @AR@
 CFLAGS		= @CFLAGS@

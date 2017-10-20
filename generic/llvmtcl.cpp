@@ -881,8 +881,8 @@ WriteModuleMachineCodeToFileCmd(
 {
     llvm::Module *module;
 
-    if (objc != 3 && objc != 4) {
-	Tcl_WrongNumArgs(interp, 1, objv, "Module ObjectFile ?CodeType?");
+    if (objc < 3 && objc > 5) {
+	Tcl_WrongNumArgs(interp, 1, objv, "Module ObjectFile ?Target? ?CodeType?");
 	return TCL_ERROR;
     }
     if (GetModuleFromObj(interp, objv[1], module) != TCL_OK) {
@@ -892,12 +892,12 @@ WriteModuleMachineCodeToFileCmd(
     auto file = Tcl_GetString(objv[2]);
     auto dumpType = LLVMObjectFile;
 
-    if (objc == 4) {
+    if (objc > 4) {
 	static const char *types[] = {
 	    "assembly", "object", NULL
 	};
 	int idx;
-	if (Tcl_GetIndexFromObj(interp, objv[3], types, "code type", 0,
+	if (Tcl_GetIndexFromObj(interp, objv[4], types, "code type", 0,
 		&idx) != TCL_OK)
 	    return TCL_ERROR;
 	switch (idx) {
@@ -906,8 +906,7 @@ WriteModuleMachineCodeToFileCmd(
 	}
     }
 
-    const char *triple = llvm::sys::getProcessTriple().c_str();
-    const char *cpu = llvm::sys::getHostCPUName().data();
+    const char *triple = (objc>3 ? Tcl_GetString(objv[3]) : LLVMTCL_TARGET);
     LLVMTargetRef target;
     char *err;
     if (LLVMGetTargetFromTriple(triple, &target, &err)) {
@@ -916,6 +915,7 @@ WriteModuleMachineCodeToFileCmd(
 	return TCL_ERROR;
     }
     auto level = LLVMCodeGenLevelDefault;
+    const char *cpu = llvm::sys::getHostCPUName().data();
     auto targetMachine = LLVMCreateTargetMachine(target, triple,
 	    cpu, "", level, LLVMRelocDynamicNoPic,
 	    LLVMCodeModelDefault);
@@ -1004,6 +1004,9 @@ DLLEXPORT int Llvmtcl_Init(Tcl_Interp *interp)
     LLVMInitializeNativeTarget();
     LLVMInitializeNativeAsmPrinter();
     if (Tcl_SetVar(interp, "::llvmtcl::llvm_version", LLVM_VERSION_STRING,
+	    TCL_GLOBAL_ONLY|TCL_LEAVE_ERR_MSG) == NULL)
+	return TCL_ERROR;
+    if (Tcl_SetVar(interp, "::llvmtcl::host_triple", LLVMTCL_TARGET,
 	    TCL_GLOBAL_ONLY|TCL_LEAVE_ERR_MSG) == NULL)
 	return TCL_ERROR;
     return TCL_OK;
