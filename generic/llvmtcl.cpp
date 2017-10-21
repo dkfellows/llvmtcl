@@ -882,12 +882,11 @@ WriteModuleMachineCodeToFileCmd(
     llvm::Module *module;
 
     if (objc < 3 && objc > 5) {
-	Tcl_WrongNumArgs(interp, 1, objv, "Module ObjectFile ?Target? ?CodeType?");
+	Tcl_WrongNumArgs(interp, 1, objv, "Module ObjectFile ?Target?");
 	return TCL_ERROR;
     }
-    if (GetModuleFromObj(interp, objv[1], module) != TCL_OK) {
+    if (GetModuleFromObj(interp, objv[1], module) != TCL_OK)
 	return TCL_ERROR;
-    }
 
     auto file = Tcl_GetString(objv[2]);
     auto dumpType = LLVMObjectFile;
@@ -906,7 +905,8 @@ WriteModuleMachineCodeToFileCmd(
 	}
     }
 
-    const char *triple = (objc>3 ? Tcl_GetString(objv[3]) : LLVMTCL_TARGET);
+    const char *triple = (objc>3 && Tcl_GetString(objv[3])[0]
+			  ? Tcl_GetString(objv[3]) : LLVMTCL_TARGET);
     LLVMTargetRef target;
     char *err;
     if (LLVMGetTargetFromTriple(triple, &target, &err)) {
@@ -914,13 +914,13 @@ WriteModuleMachineCodeToFileCmd(
 	LLVMDisposeMessage(err);
 	return TCL_ERROR;
     }
-    auto level = LLVMCodeGenLevelDefault;
+    auto level = LLVMCodeGenLevelAggressive;
     const char *cpu = llvm::sys::getHostCPUName().data();
-    auto targetMachine = LLVMCreateTargetMachine(target, triple,
-	    cpu, "", level, LLVMRelocDynamicNoPic,
-	    LLVMCodeModelDefault);
+    const char *features = "";
+    auto targetMachine = LLVMCreateTargetMachine(target, triple, cpu, features,
+	    level, LLVMRelocPIC, LLVMCodeModelDefault);
     if (LLVMTargetMachineEmitToFile(targetMachine, llvm::wrap(module),
-	    file, LLVMObjectFile, &err)) {
+	    file, dumpType, &err)) {
 	Tcl_SetResult(interp, err, TCL_VOLATILE);
 	LLVMDisposeMessage(err);
 	LLVMDisposeTargetMachine(targetMachine);
@@ -931,7 +931,7 @@ WriteModuleMachineCodeToFileCmd(
 }
 
 #define LLVMObjCmd(tclName, cName) \
-  Tcl_CreateObjCommand(interp, tclName, (Tcl_ObjCmdProc*)cName, (ClientData)NULL, (Tcl_CmdDeleteProc*)NULL);
+  Tcl_CreateObjCommand(interp, tclName, (Tcl_ObjCmdProc*)cName, (ClientData)NULL, (Tcl_CmdDeleteProc*)NULL)
 
 extern "C" {
 DLLEXPORT int Llvmtcl_Init(Tcl_Interp *interp)
