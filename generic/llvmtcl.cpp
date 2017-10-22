@@ -930,6 +930,22 @@ WriteModuleMachineCodeToFileCmd(
     return TCL_OK;
 }
 
+static const char *
+StoreExternalStringInTclVar(
+    Tcl_Interp *interp,
+    const char *tclVariable,
+    const char *externString)
+{
+    Tcl_DString buf;
+    Tcl_DStringInit(&buf);
+    auto internString = Tcl_ExternalToUtfDString(
+	    Tcl_GetEncoding(interp, NULL), externString, -1, &buf);
+    auto result = Tcl_SetVar(interp, tclVariable, internString,
+	    TCL_GLOBAL_ONLY|TCL_LEAVE_ERR_MSG);
+    Tcl_DStringFree(&buf);
+    return result;
+}
+
 #define LLVMObjCmd(tclName, cName) \
   Tcl_CreateObjCommand(interp, tclName, (Tcl_ObjCmdProc*)cName, (ClientData)NULL, (Tcl_CmdDeleteProc*)NULL)
 
@@ -1003,12 +1019,17 @@ DLLEXPORT int Llvmtcl_Init(Tcl_Interp *interp)
 
     LLVMInitializeNativeTarget();
     LLVMInitializeNativeAsmPrinter();
-    if (Tcl_SetVar(interp, "::llvmtcl::llvm_version", LLVM_VERSION_STRING,
-	    TCL_GLOBAL_ONLY|TCL_LEAVE_ERR_MSG) == NULL)
+
+    if (StoreExternalStringInTclVar(interp, "::llvmtcl::llvm_version",
+	    LLVM_VERSION_STRING) == NULL)
 	return TCL_ERROR;
-    if (Tcl_SetVar(interp, "::llvmtcl::host_triple", LLVMTCL_TARGET,
-	    TCL_GLOBAL_ONLY|TCL_LEAVE_ERR_MSG) == NULL)
+    if (StoreExternalStringInTclVar(interp, "::llvmtcl::host_triple",
+	    LLVMTCL_TARGET) == NULL)
 	return TCL_ERROR;
+    if (StoreExternalStringInTclVar(interp, "::llvmtcl::llvmbindir",
+	    LLVMBINDIR) == NULL)
+	return TCL_ERROR;
+
     return TCL_OK;
 }
 
