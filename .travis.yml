@@ -1,0 +1,12 @@
+dist: trusty
+language: cpp
+compiler:
+  - clang
+  - gcc
+addons:
+  apt:
+    sources:
+      - sourceline: 'deb http://apt.llvm.org/trusty/ llvm-toolchain-trusty-4.0 main'
+    packages:
+      - llvm-4.0
+      - llvm-4.0-dev
