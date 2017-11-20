@@ -7,10 +7,9 @@ addons:
       - llvm-toolchain-trusty-4.0
       - ubuntu-toolchain-r-test
     packages:
+      - clang-4.0
       - llvm-4.0
       - llvm-4.0-dev
-      - libstdc++-6-dev
-      - libc++-1
 install:
   - ./configure
 script:
