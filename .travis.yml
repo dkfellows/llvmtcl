@@ -6,9 +6,8 @@ compiler:
 addons:
   apt:
     sources:
-      - sourceline: 'deb http://apt.llvm.org/trusty/ llvm-toolchain-trusty-4.0 main'
+      - llvm-toolchain-trusty-4.0
     packages:
-      - llvm-4.0
-      - llvm-4.0-dev
-      - libc++1
-      - libc++abi-dev
+      - llvm-3.9
+      - llvm-3.9-dev
+      - libstdc++-6-dev
