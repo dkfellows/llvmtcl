@@ -11,7 +11,7 @@ addons:
       - llvm-4.0
       - llvm-4.0-dev
 install:
-  - ./configure
+  - ./configure --with-llvm-config=llvm-config-4.0
 script:
   - make
   - make test
