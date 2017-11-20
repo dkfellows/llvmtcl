@@ -13,8 +13,7 @@ addons:
       - libc++1
       - libc++abi1
 install:
-  - PATH=`echo /usr/local/clang-4.*/bin`:$PATH
-  - ./configure
+  - ./configure CC=clang-4.0 --with-llvm-config=llvm-config-4.0
 script:
   - make
   - make test
