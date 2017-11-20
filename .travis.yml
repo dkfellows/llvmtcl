@@ -10,3 +10,4 @@ addons:
     packages:
       - llvm-4.0
       - llvm-4.0-dev
+      - libstdc++6
