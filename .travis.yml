@@ -1,8 +1,6 @@
 dist: trusty
 language: cpp
-compiler:
-  - clang
-  - gcc
+compiler: clang
 addons:
   apt:
     sources:
@@ -12,7 +10,7 @@ addons:
       - llvm-4.0
       - llvm-4.0-dev
       - libstdc++-6-dev
-      - libc++
+      - libc++-1
 install:
   - ./configure
 script:
