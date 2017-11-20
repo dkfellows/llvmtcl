@@ -10,8 +10,8 @@ addons:
       - clang-4.0
       # - llvm-4.0
       - llvm-4.0-dev
-      - libc++1
-      - libc++abi1
+      - libc++-dev
+      - libc++abi1-dev
 install:
   - ./configure CC=clang++-4.0 --with-llvm-config=llvm-config-4.0
 script:
