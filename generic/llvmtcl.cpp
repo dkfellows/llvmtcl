@@ -516,9 +516,15 @@ LLVMGetParamsObjCmd(
         return TCL_ERROR;
 
     Tcl_Obj *rtl = Tcl_NewListObj(0, NULL);
+#ifdef API_5
+    for (auto &value : function->args())
+	Tcl_ListObjAppendElement(NULL, rtl,
+		SetLLVMValueRefAsObj(interp, llvm::wrap(&value)));
+#else // !API_5
     for (auto &value : function->getArgumentList())
 	Tcl_ListObjAppendElement(NULL, rtl,
 		SetLLVMValueRefAsObj(interp, llvm::wrap(&value)));
+#endif // API_5
 
     Tcl_SetObjResult(interp, rtl);
     return TCL_OK;

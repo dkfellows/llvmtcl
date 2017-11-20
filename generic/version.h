@@ -7,6 +7,9 @@
  * it.
  */
 
+#if LLVM_VERSION_MAJOR > 4
+#define API_5 1
+#endif // LLVM_VERSION_MAJOR > 4
 #if LLVM_VERSION_MAJOR > 3
 #define API_4 1
 #define API_3 1
