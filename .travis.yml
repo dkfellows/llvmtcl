@@ -11,3 +11,4 @@ addons:
       - llvm-4.0
       - llvm-4.0-dev
       - libc++1
+      - libc++abi-dev
