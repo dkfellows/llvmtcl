@@ -8,6 +8,6 @@ addons:
     sources:
       - llvm-toolchain-trusty-4.0
     packages:
-      - llvm-3.9
-      - llvm-3.9-dev
+      - llvm-4.0
+      - llvm-4.0-dev
       - libstdc++-6-dev
