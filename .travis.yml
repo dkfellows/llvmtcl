@@ -12,3 +12,9 @@ addons:
       - llvm-4.0
       - llvm-4.0-dev
       - libstdc++-6-dev
+      - libc++
+install:
+  - ./configure
+script:
+  - make
+  - make test
