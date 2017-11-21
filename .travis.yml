@@ -9,6 +9,7 @@ addons:
     packages:
       - clang-4.0
       - llvm-4.0-dev
+      - libc++-dev
       #- libc++-dev
       #- libc++abi1-dev
 install:
