@@ -5,11 +5,11 @@ addons:
   apt:
     sources:
       - llvm-toolchain-trusty-4.0
-      - ubuntu-toolchain-r-test
+      #- ubuntu-toolchain-r-test
     packages:
       - clang-4.0
       - llvm-4.0-dev
-      - libc++-dev
+      - gcc
       #- libc++-dev
       #- libc++abi1-dev
 install:
