@@ -218,7 +218,7 @@ GetLLVMIntrinsicIDFromObj(
     }
 
     Tcl_SetObjResult(interp, Tcl_ObjPrintf(
-	    "expected LLVMIntrinsic but got \"%s\"", str));
+	    "expected intrinsic name but got \"%s\"", str));
     return TCL_ERROR;
 }
 
@@ -629,26 +629,137 @@ LLVMGetIntrinsicDefinitionObjCmd(
 
     llvm::Module *mod;
     llvm::Intrinsic::ID id;
-    std::vector<llvm::Type *> arg_types;
 
     if (GetModuleFromObj(interp, objv[1], mod) != TCL_OK)
         return TCL_ERROR;
     if (GetLLVMIntrinsicIDFromObj(interp, objv[2], id) != TCL_OK)
         return TCL_ERROR;
-    for (int i=3 ; i<objc ; i++) {
-	llvm::Type *ty;
 
-	if (GetTypeFromObj(interp, objv[i], ty) != TCL_OK)
-	    return TCL_ERROR;
-	arg_types.push_back(ty);
+    /*
+     * The following code is nasty, but not nearly as nasty as a hard crash in
+     * LLVM itself when one of its internal checks fails. First, we parse the
+     * descriptor for the intrinsic (obtained from its ID) to see what type
+     * parameters (if any) are required.
+     */
+
+    llvm::SmallVector<llvm::Intrinsic::IITDescriptor, 8> descs;
+    llvm::Intrinsic::getIntrinsicInfoTableEntries(id, descs);
+    size_t reqs = 0;
+    std::vector<llvm::Intrinsic::IITDescriptor::ArgKind> requiredKinds;
+    for (auto desc : descs) {
+	if (desc.Kind >= llvm::Intrinsic::IITDescriptor::Argument &&
+		desc.Kind <= llvm::Intrinsic::IITDescriptor::PtrToElt) {
+	    size_t num = 1 + desc.getArgumentNumber();
+	    reqs = (num>reqs ? num : reqs);
+	    while (requiredKinds.size() < num)
+		requiredKinds.push_back(llvm::Intrinsic::IITDescriptor::AK_Any);
+	    requiredKinds[desc.getArgumentNumber()] = desc.getArgumentKind();
+	}
     }
 
-    auto intrinsic = llvm::Intrinsic::getDeclaration(mod, id, arg_types);
+    /*
+     * Now we can validate the arguments. First the total number...
+     */
 
+    if (requiredKinds.size() != (size_t) objc - 3) {
+	Tcl_SetObjResult(interp, Tcl_ObjPrintf(
+		"%s is overloaded; %d type arguments must be specified",
+		Tcl_GetString(objv[2]), (int) requiredKinds.size()));
+	if (requiredKinds.size()) {
+	    const char *sep = " (";
+	    for (auto kind : requiredKinds) {
+		Tcl_AppendResult(interp, sep, NULL);
+		sep = ", ";
+		switch (kind) {
+		case llvm::Intrinsic::IITDescriptor::AK_Any:
+		    Tcl_AppendResult(interp, "any", NULL);
+		    break;
+		case llvm::Intrinsic::IITDescriptor::AK_AnyInteger:
+		    Tcl_AppendResult(interp, "integer", NULL);
+		    break;
+		case llvm::Intrinsic::IITDescriptor::AK_AnyFloat:
+		    Tcl_AppendResult(interp, "float", NULL);
+		    break;
+		case llvm::Intrinsic::IITDescriptor::AK_AnyVector:
+		    Tcl_AppendResult(interp, "vector", NULL);
+		    break;
+		case llvm::Intrinsic::IITDescriptor::AK_AnyPointer:
+		    Tcl_AppendResult(interp, "pointer", NULL);
+		    break;
+		}
+	    }
+	    Tcl_AppendResult(interp, ")", NULL);
+	}
+	return TCL_ERROR;
+    }
+
+    /*
+     * ... and lastly we check that the type arguments passed are actually
+     * acceptable.
+     */
+
+    std::vector<llvm::Type *> arg_types;
+    for (size_t i = 0 ; i<requiredKinds.size() ; i++) {
+	auto kind = requiredKinds[i];
+	llvm::Type *ty;
+
+	if (GetTypeFromObj(interp, objv[i + 3], ty) != TCL_OK)
+	    return TCL_ERROR;
+	arg_types.push_back(ty);
+
+	/*
+	 * Do the real argument type check if required.
+	 */
+
+	switch (kind) {
+	case llvm::Intrinsic::IITDescriptor::AK_Any:
+	    // 0 means any type is acceptable
+	    break;
+	case llvm::Intrinsic::IITDescriptor::AK_AnyInteger:
+	    if (!ty->isIntegerTy()) {
+		Tcl_SetObjResult(interp, Tcl_ObjPrintf(
+			"argument %d to %s must be an integer type",
+			(int) i + 1, Tcl_GetString(objv[2])));
+		return TCL_ERROR;
+	    }
+	    break;
+	case llvm::Intrinsic::IITDescriptor::AK_AnyFloat:
+	    if (!ty->isFloatingPointTy()) {
+		Tcl_SetObjResult(interp, Tcl_ObjPrintf(
+			"type argument %d to %s must be a floating point type",
+			(int) i + 1, Tcl_GetString(objv[2])));
+		return TCL_ERROR;
+	    }
+	    break;
+	case llvm::Intrinsic::IITDescriptor::AK_AnyVector:
+	    if (!ty->isVectorTy()) {
+		Tcl_SetObjResult(interp, Tcl_ObjPrintf(
+			"type argument %d to %s must be a vector type",
+			(int) i + 1, Tcl_GetString(objv[2])));
+		return TCL_ERROR;
+	    }
+	    break;
+	case llvm::Intrinsic::IITDescriptor::AK_AnyPointer:
+	    if (!ty->isPointerTy()) {
+		Tcl_SetObjResult(interp, Tcl_ObjPrintf(
+			"type argument %d to %s must be a pointer type",
+			(int) i + 1, Tcl_GetString(objv[2])));
+		return TCL_ERROR;
+	    }
+	    break;
+	}
+    }
+
+    /*
+     * This really ought to work now. We don't assume that it *must* though.
+     */
+
+    auto intrinsic = llvm::Intrinsic::getDeclaration(mod, id, arg_types);
     if (intrinsic == NULL) {
 	SetStringResult(interp, "no such intrinsic");
 	return TCL_ERROR;
     }
+
     Tcl_SetObjResult(interp,
 	    SetLLVMValueRefAsObj(interp, llvm::wrap(intrinsic)));
     return TCL_OK;
