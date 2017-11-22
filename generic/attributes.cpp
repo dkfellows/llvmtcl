@@ -1,4 +1,5 @@
 #include "llvmtcl.h"
+#include "version.h"
 #include "llvm/IR/CallSite.h"
 
 using namespace llvm;
@@ -106,14 +107,19 @@ GetAttrFromObj(
  * ----------------------------------------------------------------------
  */
 
+template<typename T>
 static Tcl_Obj *
 DescribeAttributes(
-    AttributeSet attrs,
+    T attrs,
     unsigned slot)
 {
     auto list = Tcl_NewObj();
     for (auto map = &attrMap[0] ; map->name ; map++)
-	if (attrs.hasAttribute(slot, map->kind))
+	if (attrs.hasAttribute(
+#ifndef API_5
+		slot,
+#endif // !API_5
+		map->kind))
 	    Tcl_ListObjAppendElement(NULL, list,
 		    Tcl_NewStringObj(map->name, -1));
     return list;
@@ -209,8 +215,13 @@ LLVMGetFunctionAttrObjCmd(
 	    func) != TCL_OK)
         return TCL_ERROR;
     auto attrs = func->getAttributes();
-    Tcl_SetObjResult(interp,
-	    DescribeAttributes(attrs, AttributeSet::FunctionIndex));
+#ifdef API_5
+    auto fa = attrs.getAttributes(AttributeList::FunctionIndex);
+    Tcl_Obj *result = DescribeAttributes(fa, 0);
+#else //!API_5
+    Tcl_Obj *result = DescribeAttributes(attrs, AttributeSet::FunctionIndex);
+#endif
+    Tcl_SetObjResult(interp, result);
     return TCL_OK;
 }
 
@@ -231,19 +242,50 @@ LLVMAddAttributeObjCmd(
     int objc,
     Tcl_Obj *const objv[])
 {
+    Argument *arg;
+    Attribute::AttrKind attr;
+
+#ifdef API_5
+    if (objc != 3 && objc != 4) {
+	Tcl_WrongNumArgs(interp, 1, objv, "FnArg PA ?Int?");
+	return TCL_ERROR;
+    }
+    if (GetValueFromObj(interp, objv[1], "expected function argument",
+	    arg) != TCL_OK)
+        return TCL_ERROR;
+    if (GetAttrFromObj(interp, objv[2], attr) != TCL_OK)
+	return TCL_ERROR;
+    if (AttributeFuncs::typeIncompatible(arg->getType()).contains(attr)) {
+	Tcl_SetObjResult(interp, Tcl_NewStringObj(
+		"attribute cannot be applied to arguments of that type",
+		-1));
+	return TCL_ERROR;
+    }
+
+    if (objc == 4) {
+	// TODO: parsing of value should depend on kind of attribute
+	int payload;
+	if (Tcl_GetIntFromObj(interp, objv[3], &payload) != TCL_OK)
+	    return TCL_ERROR;
+	arg->addAttr(Attribute::get(arg->getContext(), attr, payload));
+    } else {
+	arg->addAttr(attr);
+    }
+#else // !API_5
+    // The API for handling values before LLVM 5 was really nasty!
     if (objc != 3) {
 	Tcl_WrongNumArgs(interp, 1, objv, "FnArg PA");
 	return TCL_ERROR;
     }
-    Argument *arg;
     if (GetValueFromObj(interp, objv[1], "expected function argument",
 	    arg) != TCL_OK)
-        return TCL_ERROR;
-    Attribute::AttrKind attr;
+	return TCL_ERROR;
     if (GetAttrFromObj(interp, objv[2], attr) != TCL_OK)
 	return TCL_ERROR;
-    arg->addAttr(AttributeSet::get(arg->getContext(),
-	    arg->getArgNo(), attr));
+
+    arg->addAttr(AttributeSet::get(arg->getContext(), arg->getArgNo(),
+	    attr));
+#endif // API_5
     return TCL_OK;
 }
 
@@ -275,8 +317,12 @@ LLVMRemoveAttributeObjCmd(
     Attribute::AttrKind attr;
     if (GetAttrFromObj(interp, objv[2], attr) != TCL_OK)
 	return TCL_ERROR;
+#ifdef API_5
+    arg->removeAttr(attr);
+#else // !API_5
     arg->removeAttr(AttributeSet::get(arg->getContext(),
 	    arg->getArgNo(), attr));
+#endif // API5
     return TCL_OK;
 }
 
@@ -307,8 +353,13 @@ LLVMGetAttributeObjCmd(
         return TCL_ERROR;
     auto func = arg->getParent();
     auto attrs = func->getAttributes();
+#ifdef API_5
+    auto pa = attrs.getParamAttributes(arg->getArgNo());
+    Tcl_SetObjResult(interp, DescribeAttributes(pa, 0));
+#else // !API_5
     Tcl_SetObjResult(interp,
 	    DescribeAttributes(attrs, arg->getArgNo()));
+#endif // API_5
     return TCL_OK;
 }
 
