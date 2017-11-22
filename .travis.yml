@@ -7,14 +7,11 @@ addons:
       - llvm-toolchain-trusty-4.0
       - ubuntu-toolchain-r-test
     packages:
-      - clang-4.0
-      - llvm-4.0
       - llvm-4.0-dev
       - libc++1
       - libc++abi1
 install:
-  - PATH=`echo /usr/local/clang-4.*/bin`:$PATH
-  - ./configure
+  - ./configure --with-llvm-config=llvm-config-4.0
 script:
   - make
   ### The test can't run correctly; there's a weird interaction between LLVM and Travis
