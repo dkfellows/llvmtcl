@@ -648,7 +648,7 @@ LLVMGetIntrinsicDefinitionObjCmd(
     std::vector<llvm::Intrinsic::IITDescriptor::ArgKind> requiredKinds;
     for (auto desc : descs) {
 	if (desc.Kind >= llvm::Intrinsic::IITDescriptor::Argument &&
-		desc.Kind <= llvm::Intrinsic::IITDescriptor::PtrToElt) {
+		desc.Kind <= llvm::Intrinsic::IITDescriptor::PtrToArgument) {
 	    size_t num = 1 + desc.getArgumentNumber();
 	    reqs = (num>reqs ? num : reqs);
 	    while (requiredKinds.size() < num)
