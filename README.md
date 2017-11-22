@@ -11,7 +11,7 @@ REQUIREMENTS
 ============
 
 * Tcl 8.6
-* LLVM 3.7, 3.8, 3.9 or 4.0 (4.0 is recommended for performance reasons on large functions)
+* LLVM 3.7, 3.8, 3.9, 4.0 or 5.0 (4.0 or later is recommended for performance reasons on large functions)
 
 CONTENTS
 ========
@@ -22,14 +22,14 @@ the sample extension.
     Makefile.in     Makefile template.  The configure script uses this file to
                     produce the final Makefile.
     
-    license.terms   License info for thie package.
+    license.terms   License info for this package.
     
     aclocal.m4      Generated file.  Do not edit.  Autoconf uses this as input
                     when generating the final configure script.  See "tcl.m4"
                     below.
     
     configure       Generated file.  Do not edit.  This must be regenerated
-                    anytime configure.in or tclconfig/tcl.m4 changes.
+                    any time configure.in or tclconfig/tcl.m4 changes.
     
     configure.in    Configure script template.  Autoconf uses this file as input
                     to produce the final configure script.
@@ -38,9 +38,9 @@ the sample extension.
                     this file as input to create pkgIndex.tcl.
     
     llvmtcl-gen.inp Input for llvmtcl-gen.tcl. It contains reformatted function
-                    declarations of the llvm C API.
+                    declarations of the LLVM C API.
     
-    llvmtcl-gen.tcl Script to generate the Tcl API to the llvm C API. The
+    llvmtcl-gen.tcl Script to generate the Tcl API to the LLVM C API. The
                     llvmtcl-gen.inp is the input for this script.
     
     generic/        This directory contains various source files, some only
@@ -60,14 +60,14 @@ the sample extension.
                     File containing the Tcl API to the LLVM debugging
                     information generation code.
 
-       powidf2.cpp  File continaing the implementation of one of the LLVM
+       powidf2.cpp  File containing the implementation of one of the LLVM
                     intrinsics, needed on some platforms and with some linkers.
 
        testcode.cpp Code only used for testing purposes.
 
        version.h    Simplifies LLVM API version detection.
 
-    llvmtcl.tcl     Scripts using the Tcl API to the llvm C API.
+    llvmtcl.tcl     Scripts using the Tcl API to the LLVM C API.
 
     tests/          Some tests for the package.
     
@@ -90,7 +90,7 @@ c++ compiler (e.g. clang++ or g++).
 
 Building under most UNIX systems is easy, just run the configure script
 and then run make. For more information about the build process, see
-the `tcl/unix/README` file in the Tcl src dist. The following minimal
+the `tcl/unix/README` file in the Tcl src distribution. The following minimal
 example will build and install the extension:
 
     $ cd llvmtcl
@@ -98,9 +98,6 @@ example will build and install the extension:
     $ make
     $ make test
     $ make install
-
-Add the llvm lib directory containing the llvm shared object files to the
-`LD_LIBRARY_PATH` environment variable.
 
 WINDOWS BUILD
 =============
