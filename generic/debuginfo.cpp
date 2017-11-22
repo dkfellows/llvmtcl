@@ -354,11 +354,15 @@ DefineNamespace(
     if (Tcl_GetIntFromObj(interp, objv[5], &line) != TCL_OK)
 	return TCL_ERROR;
 
+#ifdef API_5
+    auto val = builder->createNameSpace(scope, name, false);
+#else // !API_5
     auto val = builder->createNameSpace(scope, name, file, line
 #ifdef API_4
 	    , false
 #endif // API_4
 	    );
+#endif // API_5
 
     Tcl_SetObjResult(interp, NewMetadataObj(val, "Namespace"));
     return TCL_OK;
