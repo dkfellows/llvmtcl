@@ -228,7 +228,7 @@ proc gen_api_call {cf of l} {
 		"long long" -
 		"unsigned long long" {
 		    puts $cf "    Tcl_WideInt iarg$n = 0;"
-		    puts $cf "    if (Tcl_GetWideIntFromObj(interp, objv\[$on\], &arg$n) != TCL_OK)"
+		    puts $cf "    if (Tcl_GetWideIntFromObj(interp, objv\[$on\], &iarg$n) != TCL_OK)"
 		    puts $cf "        return TCL_ERROR;"
 		    puts $cf "    $fargtype arg$n = ($fargtype)iarg$n;"
 		}
@@ -268,7 +268,7 @@ proc gen_api_call {cf of l} {
 	}
 	puts -nonewline $cf "arg$n"
 	if {$fargtype eq "const char *"} {
-	    puts -nonewline $cf "c_str()"
+	    puts -nonewline $cf ".c_str()"
 	}
 	incr n
     }
@@ -276,7 +276,8 @@ proc gen_api_call {cf of l} {
     # Return result
     if {[llength $out_args]} {
 	puts $cf "    Tcl_Obj* rtl = Tcl_NewListObj(0, NULL);"
-	foreach {rnm rtp} [list rt $rt {*}$out_args] {
+	set oa [linsert $out_args 0 rt $rt]
+	foreach {rnm rtp} $oa {
 	    if {$rtp ne "void"} {
 		set rnm [val_as_obj $rtp $rnm]
 		puts $cf "    Tcl_ListObjAppendElement(interp, rtl, $rnm);"
@@ -300,24 +301,21 @@ proc gen_api_call {cf of l} {
     puts $of "    LLVMObjCmd(\"llvmtcl::$cmdnm\", ${nm}ObjCmd);"
 }
 
-proc tcltoken {name pfx sfx} {
-    return "\"[string tolower [string range $name $pfx end-$sfx]]\""
+proc maptokens {vals body} {
+    upvar 1 pfx_len prefix sfx_len suffix
+    return [join [lmap val $vals {
+    	set token "\"[string tolower [string range $val $prefix end-$suffix]]\""
+	string trim [subst $body] "\n"
+    }] "\n"]
 }
 proc gen_enum {cf l} {
-    regexp {\{(.*)\} (.*);} $l -> vals nm
-    set vals [lmap val [split $vals ,] {string trim $val}]
-    set nm [string trim $nm]
-    set pfx [string length [tcl::prefix longest $vals ""]]
-    set sfx [string length [tcl::prefix longest [lmap val $vals {string reverse $val}] ""]]
-    set toks [lmap val $vals {tcltoken $val $pfx $sfx}]
-
-    puts $cf [string trim [subst {
+    set template {
 int Get${nm}FromObj(Tcl_Interp* interp, Tcl_Obj* obj, $nm& e) {
     static std::map<std::string, $nm> s2e;
     if (s2e.size() == 0) {
-[join [lmap val $vals token $toks {string trimright [subst {
+[maptokens $vals {
         s2e\[$token\] = $val;
-}} \n}] \n]
+}]
     }
     std::string s = Tcl_GetStringFromObj(obj, 0);
     if (s2e.find(s) == s2e.end()) {
@@ -332,9 +330,9 @@ int Get${nm}FromObj(Tcl_Interp* interp, Tcl_Obj* obj, $nm& e) {
 Tcl_Obj* Set${nm}AsObj(Tcl_Interp* interp, $nm e) {
     static std::map<$nm, std::string> e2s;
     if (e2s.size() == 0) {
-[join [lmap val $vals token $toks {string trimright [subst {
+[maptokens $vals {
         e2s\[$val\] = $token;
-}} \n}] \n]
+}]
     }
     std::string s;
     if (e2s.find(e) == e2s.end())
@@ -343,12 +341,20 @@ Tcl_Obj* Set${nm}AsObj(Tcl_Interp* interp, $nm e) {
         s = e2s\[e\];
     return Tcl_NewStringObj(s.c_str(), -1);
 }
-}] "\n"]
+    }
+
+    regexp {\{(.*)\} (.*);} $l -> vals nm
+    set vals [lmap val [split $vals ,] {string trim $val}]
+    set nm [string trim $nm]
+    set pfx_len [string length [tcl::prefix longest $vals ""]]
+    set sfx_len [string length [tcl::prefix longest [lmap val $vals {
+	string reverse $val
+    }] ""]]
+    puts $cf [string trim [subst $template]]
 }
 
 proc gen_map {mf l} {
-    set tp [lindex [string trim $l " ;"] end]
-    puts $mf [string trim [subst -nocommands {
+    set template {
 static std::map<std::string, $tp> ${tp}_map;
 static std::map<$tp, std::string> ${tp}_refmap;
 int Get${tp}FromObj(Tcl_Interp* interp, Tcl_Obj* obj, $tp& ref) {
@@ -393,7 +399,10 @@ Tcl_Obj* Set${tp}AsObj(Tcl_Interp* interp, $tp ref) {
     }
     return Tcl_NewStringObj(${tp}_refmap[ref].c_str(), -1);
 }
-}] "\n"]
+}
+
+    set tp [lindex [string trim $l " ;"] end]
+    puts $mf [string trim [subst -nocommands $template] "\n"]
 }
 
 set srcdir [file dirname [info script]]
