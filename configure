@@ -2380,6 +2380,11 @@ else
 	as_fn_error $? "llvm-config not usable" "$LINENO" 5
 fi
 
+llvmbindir=`$LLVMCONFIG --bindir`
+cat >>confdefs.h <<_ACEOF
+#define LLVMBINDIR "$llvmbindir"
+_ACEOF
+
 # llvm-config --system-libs is rubbish!
 # See https://github.com/rust-lang/rust/issues/34486
 # See https://github.com/llvm-mirror/llvm/blob/7d7a23e700b5074c86834f1e597703bc58f637a8/tools/llvm-config/llvm-config.cpp#L680

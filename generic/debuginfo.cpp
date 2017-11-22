@@ -666,7 +666,8 @@ DefineArrayType(
 
     SmallVector<Metadata *, 4> subscripts;
     subscripts.push_back(builder->getOrCreateSubrange(0, cnt));
-    auto val = builder->createArrayType(cnt * sz, ALIGN_SIZE(cnt * sz) * NBBY,
+    auto val = builder->createArrayType(cnt * sz,
+	    ALIGN_SIZE(cnt * sz) * CHAR_BIT,
 	    type, builder->getOrCreateArray(subscripts));
 
     Tcl_SetObjResult(interp, NewMetadataObj(val, "ArrayType"));

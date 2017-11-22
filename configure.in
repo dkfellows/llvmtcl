@@ -51,6 +51,8 @@ AS_IF([llvm_version=`$LLVMCONFIG --version`], [
 	AC_MSG_RESULT(seems fine (version: $llvm_version))], [
 	AC_MSG_ERROR(llvm-config not usable)])
 AC_SUBST(LLVMCONFIG)
+llvmbindir=`$LLVMCONFIG --bindir`
+AC_DEFINE_UNQUOTED([LLVMBINDIR], ["$llvmbindir"])
 # llvm-config --system-libs is rubbish!
 # See https://github.com/rust-lang/rust/issues/34486
 # See https://github.com/llvm-mirror/llvm/blob/7d7a23e700b5074c86834f1e597703bc58f637a8/tools/llvm-config/llvm-config.cpp#L680

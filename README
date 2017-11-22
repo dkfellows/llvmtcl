@@ -18,7 +18,8 @@ REQUIREMENTS
 ============
 
 - Tcl 8.6
-- LLVM 3.7 or 3.8
+- LLVM 3.7, 3.8, 3.9 or 4.0
+  (4.0 is recommended for performance reasons on large functions)
 
 CONTENTS
 ========
@@ -76,6 +77,8 @@ generic/        This directory contains various source files, some only
 			linkers.
 
 	testcode.cpp	Code only used for testing purposes.
+
+        version.h       Simplifies LLVM API version detection.
 
 
 llvmtcl.tcl     Scripts using the Tcl API to the llvm C API.
@@ -148,7 +151,7 @@ USING llvmtcl
   API functions with LLVM trimmed from the front. All supported types,
   enumerators and functions can be found in:
 
-  http://github.com/jdc8/llvmtcl/blob/master/llvmtcl-gen.inp
+  http://github.com/dkfellows/llvmtcl/blob/master/llvmtcl-gen.inp
 
 - Functions taking a pointer argument followed by an unsigned argument to
   specified the number of elements the pointer is pointing to are converted to
@@ -174,3 +177,6 @@ examples/tebc.tcl
 examples/ffidle.tcl
 
     Example calling functions in shared libraries
+
+For a more extensive example of use, see the tclquadcode project:
+http://core.tcl.tk/tclquadcode/

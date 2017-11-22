@@ -27,6 +27,7 @@
 #include "llvm-c/Core.h"
 #include "llvm-c/ExecutionEngine.h"
 #include "llvm-c/Target.h"
+#include "llvm-c/TargetMachine.h"
 #include "llvm-c/BitWriter.h"
 #include "llvm-c/BitReader.h"
 #include "llvm-c/Transforms/PassManagerBuilder.h"
@@ -871,8 +872,82 @@ GarbageCollectUnusedFunctionsInModuleCmd(
     return TCL_OK;
 }
 
+static int
+WriteModuleMachineCodeToFileCmd(
+    ClientData clientData,
+    Tcl_Interp *interp,
+    int objc,
+    Tcl_Obj *const objv[])
+{
+    llvm::Module *module;
+
+    if (objc < 3 && objc > 5) {
+	Tcl_WrongNumArgs(interp, 1, objv, "Module ObjectFile ?Target?");
+	return TCL_ERROR;
+    }
+    if (GetModuleFromObj(interp, objv[1], module) != TCL_OK)
+	return TCL_ERROR;
+
+    auto file = Tcl_GetString(objv[2]);
+    auto dumpType = LLVMObjectFile;
+
+    if (objc > 4) {
+	static const char *types[] = {
+	    "assembly", "object", NULL
+	};
+	int idx;
+	if (Tcl_GetIndexFromObj(interp, objv[4], types, "code type", 0,
+		&idx) != TCL_OK)
+	    return TCL_ERROR;
+	switch (idx) {
+	case 0: dumpType = LLVMAssemblyFile; break;
+	case 1: dumpType = LLVMObjectFile; break;
+	}
+    }
+
+    const char *triple = (objc>3 && Tcl_GetString(objv[3])[0]
+			  ? Tcl_GetString(objv[3]) : LLVMTCL_TARGET);
+    LLVMTargetRef target;
+    char *err;
+    if (LLVMGetTargetFromTriple(triple, &target, &err)) {
+	Tcl_SetResult(interp, err, TCL_VOLATILE);
+	LLVMDisposeMessage(err);
+	return TCL_ERROR;
+    }
+    auto level = LLVMCodeGenLevelAggressive;
+    const char *cpu = llvm::sys::getHostCPUName().data();
+    const char *features = "";
+    auto targetMachine = LLVMCreateTargetMachine(target, triple, cpu, features,
+	    level, LLVMRelocPIC, LLVMCodeModelDefault);
+    if (LLVMTargetMachineEmitToFile(targetMachine, llvm::wrap(module),
+	    file, dumpType, &err)) {
+	Tcl_SetResult(interp, err, TCL_VOLATILE);
+	LLVMDisposeMessage(err);
+	LLVMDisposeTargetMachine(targetMachine);
+	return TCL_ERROR;
+    }
+    LLVMDisposeTargetMachine(targetMachine);
+    return TCL_OK;
+}
+
+static const char *
+StoreExternalStringInTclVar(
+    Tcl_Interp *interp,
+    const char *tclVariable,
+    const char *externString)
+{
+    Tcl_DString buf;
+    Tcl_DStringInit(&buf);
+    auto internString = Tcl_ExternalToUtfDString(
+	    Tcl_GetEncoding(interp, NULL), externString, -1, &buf);
+    auto result = Tcl_SetVar(interp, tclVariable, internString,
+	    TCL_GLOBAL_ONLY|TCL_LEAVE_ERR_MSG);
+    Tcl_DStringFree(&buf);
+    return result;
+}
+
 #define LLVMObjCmd(tclName, cName) \
-  Tcl_CreateObjCommand(interp, tclName, (Tcl_ObjCmdProc*)cName, (ClientData)NULL, (Tcl_CmdDeleteProc*)NULL);
+  Tcl_CreateObjCommand(interp, tclName, (Tcl_ObjCmdProc*)cName, (ClientData)NULL, (Tcl_CmdDeleteProc*)NULL)
 
 extern "C" {
 DLLEXPORT int Llvmtcl_Init(Tcl_Interp *interp)
@@ -909,6 +984,8 @@ DLLEXPORT int Llvmtcl_Init(Tcl_Interp *interp)
     LLVMObjCmd("llvmtcl::CreateModuleFromBitcode", CreateModuleFromBitcodeCmd);
     LLVMObjCmd("llvmtcl::GarbageCollectUnusedFunctionsInModule",
 	    GarbageCollectUnusedFunctionsInModuleCmd);
+    LLVMObjCmd("llvmtcl::WriteModuleMachineCodeToFile",
+	    WriteModuleMachineCodeToFileCmd);
     // Debugging info support
     LLVMObjCmd("llvmtcl::DebugInfo::BuildDbgValue", BuildDbgValue);
     LLVMObjCmd("llvmtcl::DebugInfo::CreateBuilder", CreateDebugBuilder);
@@ -942,9 +1019,17 @@ DLLEXPORT int Llvmtcl_Init(Tcl_Interp *interp)
 
     LLVMInitializeNativeTarget();
     LLVMInitializeNativeAsmPrinter();
-    if (Tcl_SetVar(interp, "::llvmtcl::llvm_version", LLVM_VERSION_STRING,
-	    TCL_GLOBAL_ONLY|TCL_LEAVE_ERR_MSG) == NULL)
+
+    if (StoreExternalStringInTclVar(interp, "::llvmtcl::llvm_version",
+	    LLVM_VERSION_STRING) == NULL)
 	return TCL_ERROR;
+    if (StoreExternalStringInTclVar(interp, "::llvmtcl::host_triple",
+	    LLVMTCL_TARGET) == NULL)
+	return TCL_ERROR;
+    if (StoreExternalStringInTclVar(interp, "::llvmtcl::llvmbindir",
+	    LLVMBINDIR) == NULL)
+	return TCL_ERROR;
+
     return TCL_OK;
 }
 
