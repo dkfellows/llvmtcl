@@ -175,6 +175,18 @@ CreateDebugBuilder(
     if (GetModuleFromObj(interp, objv[1], module) != TCL_OK)
 	return TCL_ERROR;
 
+    /*
+     * This is MAGIC! VIRTUALLY UNDOCUMENTED MAGIC! It prevents the debug info
+     * from being thrown away by the optimiser with an ugly warning.
+     *
+     * Where is this documented? In a presentation of all places...
+     * https://llvm.org/devmtg/2014-10/Slides/Christopher-DebugInfoTutorial.pdf
+     */
+    module->addModuleFlag(Module::Warning, "Debug Info Version",
+			  DEBUG_METADATA_VERSION);
+    if (Triple(sys::getProcessTriple()).isOSDarwin())
+	module->addModuleFlag(Module::Warning, "Dwarf Version", 2);
+
     Tcl_SetObjResult(interp, NewDIBuilderObj(new DIBuilder(*module)));
     return TCL_OK;
 }
