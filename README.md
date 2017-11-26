@@ -21,6 +21,8 @@ CONTENTS
 The following is a short description of the files you will find in
 the sample extension.
 
+| Name | Purpose |
+| ---- | ------- |
 | `Makefile.in` | Makefile template.  The `configure` script uses this file to produce the final `Makefile`. |
 | `license.terms` | License info for this package. |
 | `aclocal.m4` | Generated file.  Do not edit.  Autoconf uses this as input when generating the final configure script.  See `tcl.m4` below. |
