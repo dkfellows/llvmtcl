@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/dkfellows/llvmtcl.svg?branch=master)](https://travis-ci.org/dkfellows/llvmtcl)
+
 This is the llvmtcl extension based on the Tcl Extension Architecture (TEA).
 Please see the the [Tcler's wiki page](http://wiki.tcl.tk/26308)
 for more details.
