@@ -483,7 +483,7 @@ set f [open [file join $srcdir llvmtcl-gen.inp] r]
 set ll [split [read $f] \n]
 close $f
 
-set targetdir [file join $srcdir generic generated]
+set targetdir [file join $builddir generic generated]
 file mkdir $targetdir
 set cf [open [file join $targetdir llvmtcl-gen.h] w]
 set of [open [file join $targetdir llvmtcl-gen-cmddef.h] w]
