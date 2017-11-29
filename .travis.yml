@@ -1,0 +1,18 @@
+dist: trusty
+language: cpp
+compiler: clang
+addons:
+  apt:
+    sources:
+      - llvm-toolchain-trusty-4.0
+      - ubuntu-toolchain-r-test
+    packages:
+      - llvm-4.0-dev
+      - libc++1
+      - libc++abi1
+install:
+  - ./configure --with-llvm-config=llvm-config-4.0
+script:
+  - make
+  ### The test can't run correctly; there's a weird interaction between LLVM and Travis
+  #- make test

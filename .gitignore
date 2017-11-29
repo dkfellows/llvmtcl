@@ -1,0 +1,15 @@
+*.o
+.DS_Store
+autom4te.cache
+.project
+*.dll
+*.so
+*.dylib
+config.log
+config.status
+pkgIndex.tcl
+Makefile
+/generic/generated/
+*.ll
+/.cproject
+/.settings/

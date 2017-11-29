@@ -1,3 +1,5 @@
+package require Tcl 8.5
+
 proc gen_api_call {cf of l} {
     lassign [split $l "("] rtnm fargs
     set rtnm [string trim $rtnm]
@@ -269,7 +271,7 @@ proc gen_api_call {cf of l} {
     # Return result
     if {[llength $out_args]} {
 	puts $cf "    Tcl_Obj* rtl = Tcl_NewListObj(0, NULL);"
-	foreach {rnm rtp} [list rt $rt {*}$out_args] {
+	foreach {rnm rtp} [linsert $out_args 0 rt $rt] {
 	    switch -exact -- $rtp {
 		"LLVMBuilderRef" -
 		"LLVMContextRef" -
@@ -460,6 +462,7 @@ proc gen_map {mf l} {
     puts $mf "    return TCL_OK;"
     puts $mf "\}"
     puts $mf "Tcl_Obj* Set${tp}AsObj(Tcl_Interp* interp, $tp ref) \{"
+    puts $mf "    if (!ref) return Tcl_NewObj();"
     puts $mf "    if (${tp}_refmap.find(ref) == ${tp}_refmap.end()) \{"
     puts $mf "        std::string nm = GetRefName(\"${tp}_\");"
     puts $mf "        ${tp}_map\[nm\] = ref;"
@@ -469,19 +472,22 @@ proc gen_map {mf l} {
     puts $mf "\}"
 }
 
-set base [file dirname [info script]]
-if {[llength $argv] == 1} {
+set srcdir [file dirname [info script]]
+if {[llength $argv] >= 1} {
     set builddir [lindex $argv 0]
 } else {
-    set builddir $base
+    set builddir $srcdir
 }
-set f [open [file join $base llvmtcl-gen.inp] r]
+
+set f [open [file join $srcdir llvmtcl-gen.inp] r]
 set ll [split [read $f] \n]
 close $f
 
-set cf [open [file join $builddir generic/llvmtcl-gen.c] w]
-set of [open [file join $builddir generic/llvmtcl-gen-cmddef.c] w]
-set mf [open [file join $builddir generic/llvmtcl-gen-map.c] w]
+set targetdir [file join $srcdir generic generated]
+file mkdir $targetdir
+set cf [open [file join $targetdir llvmtcl-gen.h] w]
+set of [open [file join $targetdir llvmtcl-gen-cmddef.h] w]
+set mf [open [file join $targetdir llvmtcl-gen-map.h] w]
 
 foreach l $ll {
     set l [string trim $l]

@@ -1,0 +1,69 @@
+package require tcltest 2
+package require llvmtcl
+
+tcltest::test external-1 {write object code to file} -setup {
+    llvmtcl InitializeNativeTarget
+    set module [llvmtcl ModuleCreateWithName "testmodule"]
+    set bld [llvmtcl CreateBuilder]
+    set ft [llvmtcl FunctionType [llvmtcl Int32Type] [list [llvmtcl Int32Type]] 0]
+    set pass [llvmtcl AddFunction $module "pass" $ft]
+    set entry [llvmtcl AppendBasicBlock $pass "entry"]
+    llvmtcl PositionBuilderAtEnd $bld $entry
+    set value [llvmtcl GetParam $pass 0]
+    llvmtcl BuildRet $bld $value
+    llvmtcl DisposeBuilder $bld
+    set o1 [tcltest::makeFile "" code1.o]
+    close [open $o1 w]
+    set o2 [tcltest::makeFile "" code2.o]
+    close [open $o2 w]
+    set o3 [tcltest::makeFile "" code3.o]
+    close [open $o3 w]
+} -body {
+    set result [list [file size $o1] [file size $o2] [file size $o3]]
+    llvmtcl::WriteModuleMachineCodeToFile $module $o1
+    llvmtcl::WriteModuleMachineCodeToFile $module $o2 $::llvmtcl::host_triple
+    llvmtcl::WriteModuleMachineCodeToFile $module $o3 $::llvmtcl::host_triple object
+    lappend result [expr {[set s [file size $o1]] > 0}]
+    lappend result [expr {$s - [file size $o2]}] [expr {$s - [file size $o3]}]
+} -cleanup {
+    tcltest::removeFile $o1
+    tcltest::removeFile $o2
+    tcltest::removeFile $o3
+    llvmtcl DisposeModule $module
+} -result {0 0 0 1 0 0}
+
+tcltest::test external-2 {write assembly code to file} -setup {
+    llvmtcl InitializeNativeTarget
+    set module [llvmtcl ModuleCreateWithName "testmodule"]
+    set bld [llvmtcl CreateBuilder]
+    set ft [llvmtcl FunctionType [llvmtcl Int32Type] [list [llvmtcl Int32Type]] 0]
+    set pass [llvmtcl AddFunction $module "pass" $ft]
+    set entry [llvmtcl AppendBasicBlock $pass "entry"]
+    llvmtcl PositionBuilderAtEnd $bld $entry
+    set value [llvmtcl GetParam $pass 0]
+    llvmtcl BuildRet $bld $value
+    llvmtcl DisposeBuilder $bld
+    set o1 [tcltest::makeFile "" code1.s]
+    close [open $o1 w]
+    set o2 [tcltest::makeFile "" code2.s]
+    close [open $o2 w]
+} -body {
+    set result [file size $o1]
+    llvmtcl::WriteModuleMachineCodeToFile $module $o1 $::llvmtcl::host_triple assembly
+    llvmtcl::WriteModuleMachineCodeToFile $module $o2 {} assembly
+    lappend result [expr {[set s [file size $o1]] > 0}]
+    lappend result [expr {$s - [file size $o2]}]
+    # Check that the assembly code mentions the function name
+    lappend result [regexp {\y_?pass\y} [tcltest::viewFile $o1]]
+} -cleanup {
+    tcltest::removeFile $o1
+    tcltest::removeFile $o2
+    llvmtcl DisposeModule $module
+} -result {0 1 0 1}
+
+tcltest::cleanupTests
+return
+
+# Local Variables:
+# mode: tcl
+# End:

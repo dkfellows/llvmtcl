@@ -11,7 +11,7 @@ find_package(TclSh REQUIRED)
 find_package(TclStub REQUIRED)
 
 set (PACKAGE_NAME "llvmtcl")
-set (PACKAGE_VERSION "3.6")
+set (PACKAGE_VERSION "3.8.1")
 set (PKG_LIB_FILE "llvmtcl.dll")
 
 
@@ -25,6 +25,3 @@ SET (PKG_INSTALL_DIR "lib/${PACKAGE_NAME}${PACKAGE_VERSION}")
 
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/pkgIndex.tcl DESTINATION ${PKG_INSTALL_DIR})
 install(FILES llvmtcl.tcl optimise.tcl DESTINATION ${PKG_INSTALL_DIR})
-
-
-
