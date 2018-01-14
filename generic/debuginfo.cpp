@@ -309,22 +309,26 @@ DefineLocation(
     int objc,
     Tcl_Obj *const objv[])
 {
-    if (objc != 4) {
-	Tcl_WrongNumArgs(interp, 1, objv, "scope line column");
+    if (objc < 4 || objc > 5) {
+	Tcl_WrongNumArgs(interp, 1, objv, "scope line column ?inlinedAt?");
 	return TCL_ERROR;
     }
 
     DILocalScope *scope;
     int line, column;
+    DILocation *inlinedAt = nullptr;
     if (GetMetadataFromObj(interp, objv[1], "scope", scope) != TCL_OK)
 	return TCL_ERROR;
     if (Tcl_GetIntFromObj(interp, objv[2], &line) != TCL_OK)
 	return TCL_ERROR;
     if (Tcl_GetIntFromObj(interp, objv[3], &column) != TCL_OK)
 	return TCL_ERROR;
+    if (objc > 4 && GetMetadataFromObj(interp, objv[4], "location",
+	    inlinedAt) != TCL_OK)
+	return TCL_ERROR;
 
     auto val = DILocation::get(scope->getContext(),
-	    (unsigned) line, (unsigned) column, scope);
+	    (unsigned) line, (unsigned) column, scope, inlinedAt);
 
     Tcl_SetObjResult(interp, NewMetadataObj(val, "Location"));
     return TCL_OK;
