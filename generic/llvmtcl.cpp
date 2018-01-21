@@ -897,6 +897,33 @@ GetHostTripleObjCmd(
 }
 
 static int
+CopyModuleFromModuleCmd(
+    ClientData clientData,
+    Tcl_Interp *interp,
+    int objc,
+    Tcl_Obj *const objv[])
+{
+    if (objc < 2 || objc > 4) {
+        Tcl_WrongNumArgs(interp, 1, objv, "M ?NewModuleID? ?NewSourceFile?");
+        return TCL_ERROR;
+    }
+    LLVMModuleRef srcmod = 0;
+    if (GetLLVMModuleRefFromObj(interp, objv[1], srcmod) != TCL_OK)
+        return TCL_ERROR;
+    LLVMModuleRef tgtmod = LLVMCloneModule(srcmod);
+    if (objc > 2) {
+	std::string tgtid = Tcl_GetString(objv[2]);
+	llvm::unwrap(tgtmod)->setModuleIdentifier(tgtid);
+    }
+    if (objc > 3) {
+	std::string tgtfile = Tcl_GetString(objv[3]);
+	llvm::unwrap(tgtmod)->setSourceFileName(tgtfile);
+    }
+    Tcl_SetObjResult(interp, SetLLVMModuleRefAsObj(interp, tgtmod));
+    return TCL_OK;
+}
+
+static int
 CreateModuleFromBitcodeCmd(
     ClientData clientData,
     Tcl_Interp *interp,
@@ -1098,6 +1125,7 @@ DLLEXPORT int Llvmtcl_Init(Tcl_Interp *interp)
     LLVMObjCmd("llvmtcl::CreateMCJITCompilerForModule",
 	    CreateMCJITCompilerForModuleObjCmd);
     LLVMObjCmd("llvmtcl::GetHostTriple", GetHostTripleObjCmd);
+    LLVMObjCmd("llvmtcl::CopyModuleFromModule", CopyModuleFromModuleCmd);
     LLVMObjCmd("llvmtcl::CreateModuleFromBitcode", CreateModuleFromBitcodeCmd);
     LLVMObjCmd("llvmtcl::GarbageCollectUnusedFunctionsInModule",
 	    GarbageCollectUnusedFunctionsInModuleCmd);
