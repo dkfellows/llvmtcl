@@ -1047,6 +1047,44 @@ WriteModuleMachineCodeToFileCmd(
     return TCL_OK;
 }
 
+#ifdef API_5
+static int
+LLVMTokenTypeObjCmd(
+    ClientData clientData,
+    Tcl_Interp *interp,
+    int objc,
+    Tcl_Obj *const objv[])
+{
+    if (objc != 1) {
+        Tcl_WrongNumArgs(interp, 1, objv, "");
+        return TCL_ERROR;
+    }
+
+    auto tokenType = llvm::Type::getTokenTy(
+	    *llvm::unwrap(LLVMGetGlobalContext()));
+    Tcl_SetObjResult(interp, NewTypeObj(tokenType));
+    return TCL_OK;
+}
+
+static int
+LLVMConstNoneObjCmd(
+    ClientData clientData,
+    Tcl_Interp *interp,
+    int objc,
+    Tcl_Obj *const objv[])
+{
+    if (objc != 1) {
+        Tcl_WrongNumArgs(interp, 1, objv, "");
+        return TCL_ERROR;
+    }
+
+    auto tokenType = llvm::ConstantTokenNone::get(
+	    *llvm::unwrap(LLVMGetGlobalContext()));
+    Tcl_SetObjResult(interp, NewValueObj(tokenType));
+    return TCL_OK;
+}
+#endif
+
 static const char *
 StoreExternalStringInTclVar(
     Tcl_Interp *interp,
@@ -1079,6 +1117,10 @@ DLLEXPORT int Llvmtcl_Init(Tcl_Interp *interp)
 	return TCL_ERROR;
 
 #include "generated/llvmtcl-gen-cmddef.h"
+#ifdef API_5
+    LLVMObjCmd("llvmtcl::TokenType", LLVMTokenTypeObjCmd);
+    LLVMObjCmd("llvmtcl::ConstNone", LLVMConstNoneObjCmd);
+#endif
     LLVMObjCmd("llvmtcl::CreateGenericValueOfTclInterp", LLVMCreateGenericValueOfTclInterpObjCmd);
     LLVMObjCmd("llvmtcl::CreateGenericValueOfTclObj", LLVMCreateGenericValueOfTclObjObjCmd);
     LLVMObjCmd("llvmtcl::GenericValueToTclObj", LLVMGenericValueToTclObjObjCmd);
