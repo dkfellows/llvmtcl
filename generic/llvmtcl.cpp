@@ -897,6 +897,40 @@ GetHostTripleObjCmd(
 }
 
 static int
+CopyModuleFromModuleCmd(
+    ClientData clientData,
+    Tcl_Interp *interp,
+    int objc,
+    Tcl_Obj *const objv[])
+{
+    if (objc < 2 || objc > 4) {
+        Tcl_WrongNumArgs(interp, 1, objv, "M ?NewModuleID? ?NewSourceFile?");
+        return TCL_ERROR;
+    }
+    LLVMModuleRef srcmod = 0;
+    if (GetLLVMModuleRefFromObj(interp, objv[1], srcmod) != TCL_OK)
+        return TCL_ERROR;
+    LLVMModuleRef tgtmod = LLVMCloneModule(srcmod);
+    if (objc > 2) {
+	std::string tgtid = Tcl_GetString(objv[2]);
+	llvm::unwrap(tgtmod)->setModuleIdentifier(tgtid);
+    }
+    if (objc > 3) {
+#ifdef API_4
+	std::string tgtfile = Tcl_GetString(objv[3]);
+	llvm::unwrap(tgtmod)->setSourceFileName(tgtfile);
+#else // !API_4
+	LLVMDisposeModule(tgtmod);
+	Tcl_SetObjResult(interp, Tcl_ObjPrintf(
+	    "setting source filename not supported in older LLVMs: upgrade to 4.0 or later"));
+	return TCL_ERROR;
+#endif // API_4
+    }
+    Tcl_SetObjResult(interp, SetLLVMModuleRefAsObj(interp, tgtmod));
+    return TCL_OK;
+}
+
+static int
 CreateModuleFromBitcodeCmd(
     ClientData clientData,
     Tcl_Interp *interp,
@@ -1047,6 +1081,44 @@ WriteModuleMachineCodeToFileCmd(
     return TCL_OK;
 }
 
+#ifdef API_3
+static int
+LLVMTokenTypeObjCmd(
+    ClientData clientData,
+    Tcl_Interp *interp,
+    int objc,
+    Tcl_Obj *const objv[])
+{
+    if (objc != 1) {
+        Tcl_WrongNumArgs(interp, 1, objv, "");
+        return TCL_ERROR;
+    }
+
+    auto tokenType = llvm::Type::getTokenTy(
+	    *llvm::unwrap(LLVMGetGlobalContext()));
+    Tcl_SetObjResult(interp, NewTypeObj(tokenType));
+    return TCL_OK;
+}
+
+static int
+LLVMConstNoneObjCmd(
+    ClientData clientData,
+    Tcl_Interp *interp,
+    int objc,
+    Tcl_Obj *const objv[])
+{
+    if (objc != 1) {
+        Tcl_WrongNumArgs(interp, 1, objv, "");
+        return TCL_ERROR;
+    }
+
+    auto noneConstant = llvm::ConstantTokenNone::get(
+	    *llvm::unwrap(LLVMGetGlobalContext()));
+    Tcl_SetObjResult(interp, NewValueObj(noneConstant));
+    return TCL_OK;
+}
+#endif // API_3
+
 static const char *
 StoreExternalStringInTclVar(
     Tcl_Interp *interp,
@@ -1079,6 +1151,10 @@ DLLEXPORT int Llvmtcl_Init(Tcl_Interp *interp)
 	return TCL_ERROR;
 
 #include "generated/llvmtcl-gen-cmddef.h"
+#ifdef API_3
+    LLVMObjCmd("llvmtcl::TokenType", LLVMTokenTypeObjCmd);
+    LLVMObjCmd("llvmtcl::ConstNone", LLVMConstNoneObjCmd);
+#endif // API_3
     LLVMObjCmd("llvmtcl::CreateGenericValueOfTclInterp", LLVMCreateGenericValueOfTclInterpObjCmd);
     LLVMObjCmd("llvmtcl::CreateGenericValueOfTclObj", LLVMCreateGenericValueOfTclObjObjCmd);
     LLVMObjCmd("llvmtcl::GenericValueToTclObj", LLVMGenericValueToTclObjObjCmd);
@@ -1098,6 +1174,7 @@ DLLEXPORT int Llvmtcl_Init(Tcl_Interp *interp)
     LLVMObjCmd("llvmtcl::CreateMCJITCompilerForModule",
 	    CreateMCJITCompilerForModuleObjCmd);
     LLVMObjCmd("llvmtcl::GetHostTriple", GetHostTripleObjCmd);
+    LLVMObjCmd("llvmtcl::CopyModuleFromModule", CopyModuleFromModuleCmd);
     LLVMObjCmd("llvmtcl::CreateModuleFromBitcode", CreateModuleFromBitcodeCmd);
     LLVMObjCmd("llvmtcl::GarbageCollectUnusedFunctionsInModule",
 	    GarbageCollectUnusedFunctionsInModuleCmd);
