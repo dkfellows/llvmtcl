@@ -899,8 +899,11 @@ BuildDbgValue(
 
     auto expr = builder->createExpression(); // Dummy
 
-    auto inst = builder->insertDbgValueIntrinsic(val, 0, varInfo, expr,
-	    location, b->GetInsertBlock());
+    auto inst = builder->insertDbgValueIntrinsic(val,
+#ifndef API_6
+	    0,
+#endif // !API_6
+	    varInfo, expr, location, b->GetInsertBlock());
 
     Tcl_SetObjResult(interp, NewValueObj(inst));
     return TCL_OK;
