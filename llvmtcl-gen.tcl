@@ -406,16 +406,20 @@ Tcl_Obj* Set${tp}AsObj(Tcl_Interp* interp, $tp ref) {
 }
 
 set srcdir [file dirname [info script]]
+if {[llength $argv] >= 1} {
+    set targetdir [lindex $argv 0]
+} else {
+    set targetdir [file join $srcdir generic generated]
+}
 
-set f [open $srcdir/llvmtcl-gen.inp r]
+set f [open [file join $srcdir llvmtcl-gen.inp] r]
 set ll [split [read $f] \n]
 close $f
 
-set targetdir $srcdir/generic/generated
-catch {file mkdir $targetdir} 
-set cf [open $targetdir/llvmtcl-gen.h w]
-set of [open $targetdir/llvmtcl-gen-cmddef.h w]
-set mf [open $targetdir/llvmtcl-gen-map.h w]
+file mkdir $targetdir
+set cf [open [file join $targetdir llvmtcl-gen.h] w]
+set of [open [file join $targetdir llvmtcl-gen-cmddef.h] w]
+set mf [open [file join $targetdir llvmtcl-gen-map.h] w]
 
 foreach l $ll {
     set l [string trim $l]
