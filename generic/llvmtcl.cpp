@@ -916,8 +916,15 @@ CopyModuleFromModuleCmd(
 	llvm::unwrap(tgtmod)->setModuleIdentifier(tgtid);
     }
     if (objc > 3) {
+#ifdef API_4
 	std::string tgtfile = Tcl_GetString(objv[3]);
 	llvm::unwrap(tgtmod)->setSourceFileName(tgtfile);
+#else // !API_4
+	LLVMDisposeModule(tgtmod);
+	Tcl_SetObjResult(interp, Tcl_ObjPrintf(
+	    "setting source filename not supported in older LLVMs: upgrade to 4.0 or later"));
+	return TCL_ERROR;
+#endif // API_4
     }
     Tcl_SetObjResult(interp, SetLLVMModuleRefAsObj(interp, tgtmod));
     return TCL_OK;
