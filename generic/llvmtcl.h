@@ -28,7 +28,7 @@ extern "C" double	__powidf2(double a, int b);
 
 #define DECL_CMD(cName) \
     MODULE_SCOPE int cName(ClientData clientData, Tcl_Interp *interp, \
-	    int objc, Tcl_Obj *const objv[]);
+	    int objc, Tcl_Obj *const objv[])
 
 DECL_CMD(BuildDbgValue);
 DECL_CMD(CreateDebugBuilder);
