@@ -2,6 +2,18 @@
 #include <tcl.h>
 #include <llvm/IR/Intrinsics.h>
 #include <llvm-c/Core.h>
+
+/*
+ * Manage the table of intrinsic functions. This table is driven by LLVM's
+ * configuration.
+ *
+ * Tricky point: this table is *not* sorted by name. It is sorted by intrinsic
+ * ID, and the IDs are arranged in thematic blocks (and usually alphabetically
+ * within a block, though that's not guaranteed). Binary search doesn't work.
+ *
+ * Second tricky point: IDs are actually offset by 1 from the index into this
+ * table. Yeah.
+ */
 
 static const char *const intrinsicNames[] = {
 #define GET_INTRINSIC_NAME_TABLE
@@ -9,39 +21,69 @@ static const char *const intrinsicNames[] = {
 #undef GET_INTRINSIC_NAME_TABLE
 };
 
+TCL_DECLARE_MUTEX(initLock)
+
 static inline int
 GetLLVMIntrinsicIDFromObj(
     Tcl_Interp *interp,
     Tcl_Obj *obj,
     llvm::Intrinsic::ID &id)
 {
-    const char *str = Tcl_GetString(obj);
-    size_t num = sizeof(intrinsicNames)/sizeof(const char *);
+    static Tcl_HashTable intrinsicNameHash;
+    static int intrinsicNameHashInit = 0;
+    Tcl_HashEntry *hPtr;
 
-    // Linear scan; only thing that works reliably...
-    for (size_t i=0 ; i<num ; i++) {
-	if (!strcmp(str, intrinsicNames[i])) {
-	    id = (llvm::Intrinsic::ID) (i+1);
-	    return TCL_OK;
+    /*
+     * Initialise the hash table if it wasn't already.
+     */
+
+    Tcl_MutexLock(&initLock);
+    if (!intrinsicNameHashInit) {
+	const size_t num = sizeof(intrinsicNames) / sizeof(const char *);
+	intrinsicNameHashInit = 1;
+	Tcl_InitHashTable(&intrinsicNameHash, TCL_STRING_KEYS);
+	for (size_t i=0 ; i<num ; i++) {
+	    int dummy;
+
+	    hPtr = Tcl_CreateHashEntry(
+		    &intrinsicNameHash, intrinsicNames[i], &dummy);
+	    Tcl_SetHashValue(hPtr, reinterpret_cast<const void *>(i + 1));
 	}
     }
+    Tcl_MutexUnlock(&initLock);
 
-    Tcl_SetObjResult(interp, Tcl_ObjPrintf(
-	    "expected intrinsic name but got \"%s\"", str));
-    return TCL_ERROR;
+    /*
+     * Do the search.
+     */
+
+    hPtr = Tcl_FindHashEntry(&intrinsicNameHash, Tcl_GetString(obj));
+    if (hPtr == NULL) {
+	Tcl_SetObjResult(interp, Tcl_ObjPrintf(
+		"expected intrinsic name but got \"%s\"", Tcl_GetString(obj)));
+	return TCL_ERROR;
+    }
+    id = static_cast<llvm::Intrinsic::ID>(reinterpret_cast<size_t>(
+	    Tcl_GetHashValue(hPtr)));
+    return TCL_OK;
 }
 
 static inline Tcl_Obj *
 SetLLVMIntrinsicIDAsObj(
     unsigned id)
 {
-    if (id <= 0 || id > sizeof(intrinsicNames)/sizeof(const char *)) {
+    if (id <= 0 || id > sizeof(intrinsicNames) / sizeof(const char *)) {
 	return Tcl_NewStringObj("<unknown LLVMIntrinsic>", -1);
     }
 
-    std::string s = intrinsicNames[id-1];
+    std::string s = intrinsicNames[id - 1];
     return Tcl_NewStringObj(s.c_str(), -1);
 }
+
+/*
+ * The Tcl commands that reach into the table of intrinsics. They're made as
+ * safe as possible. Intrinsics mostly look like (special) function
+ * definitions to the rest of LLVM.
+ */
 
 static inline void
 MakeIntrinsicIsOverloadedError(
@@ -222,3 +264,12 @@ LLVMGetIntrinsicIDObjCmd(
 	Tcl_SetObjResult(interp, SetLLVMIntrinsicIDAsObj(id));
     return TCL_OK;
 }
+
+/*
+ * Local Variables:
+ * mode: c++
+ * c-basic-offset: 4
+ * fill-column: 78
+ * tab-width: 8
+ * End:
+ */
