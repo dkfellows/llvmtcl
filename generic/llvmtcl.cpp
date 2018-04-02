@@ -16,9 +16,12 @@
 
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
 #include "llvm/Transforms/IPO.h"
+#include "llvm/Transforms/Coroutines.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/LegacyPassManager.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
 #include "llvm/ExecutionEngine/GenericValue.h"
@@ -56,6 +59,31 @@ static const char *const intrinsicNames[] = {
 #include "llvm/IR/Intrinsics.gen"
 #undef GET_INTRINSIC_NAME_TABLE
 };
+
+static int
+ParseCommandLineOptionsObjCmd(ClientData clientData,
+			      Tcl_Interp* interp,
+			      int objc,
+			      Tcl_Obj* const objv[])
+{
+    std::vector<const char*> argv(objc);
+    for (int i = 0; i < objc; ++i) {
+	argv[i] = Tcl_GetString(objv[i]);
+    }
+    bool result =
+	llvm::cl::ParseCommandLineOptions(objc, argv.data(),
+							 "called from Tcl");
+    Tcl_SetObjResult(interp, Tcl_NewIntObj(result));
+    return TCL_OK;
+}
+
+static void
+LLVMAddCoroutinePassesToExtensionPoints(LLVMPassManagerBuilderRef ref)
+{
+    llvm::PassManagerBuilder *Builder =
+	reinterpret_cast<llvm::PassManagerBuilder*>(ref);
+    addCoroutinePassesToExtensionPoints(*Builder);
+}
 
 static std::string
 LLVMDumpModuleTcl(
@@ -1151,6 +1179,8 @@ DLLEXPORT int Llvmtcl_Init(Tcl_Interp *interp)
 	return TCL_ERROR;
 
 #include "generated/llvmtcl-gen-cmddef.h"
+    LLVMObjCmd("llvmtcl::ParseCommandLineOptions",
+	       ParseCommandLineOptionsObjCmd);
 #ifdef API_3
     LLVMObjCmd("llvmtcl::TokenType", LLVMTokenTypeObjCmd);
     LLVMObjCmd("llvmtcl::ConstNone", LLVMConstNoneObjCmd);
