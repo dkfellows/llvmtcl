@@ -13,7 +13,7 @@ REQUIREMENTS
 ============
 
 * Tcl 8.6
-* LLVM 3.7, 3.8, 3.9, 4.0 or 5.0 (4.0 or later is recommended for performance reasons on large functions)
+* LLVM 3.7, 3.8, 3.9, 4.0, 5.0 or 6.0 (4.0 or later is recommended for performance reasons on large functions; the developers normally only check to see if builds work from 4.0 onwards)
 * Optional: CMake for Windows Build
 
 CONTENTS
