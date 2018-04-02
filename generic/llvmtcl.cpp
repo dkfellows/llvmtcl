@@ -61,27 +61,33 @@ static const char *const intrinsicNames[] = {
 };
 
 static int
-ParseCommandLineOptionsObjCmd(ClientData clientData,
-			      Tcl_Interp* interp,
-			      int objc,
-			      Tcl_Obj* const objv[])
+ParseCommandLineOptionsObjCmd(
+    ClientData clientData,
+    Tcl_Interp *interp,
+    int objc,
+    Tcl_Obj *const objv[])
 {
     std::vector<const char*> argv(objc);
     for (int i = 0; i < objc; ++i) {
 	argv[i] = Tcl_GetString(objv[i]);
     }
-    bool result =
-	llvm::cl::ParseCommandLineOptions(objc, argv.data(),
-							 "called from Tcl");
-    Tcl_SetObjResult(interp, Tcl_NewIntObj(result));
+
+    std::string s;
+    llvm::raw_string_ostream os(s);
+    bool result = llvm::cl::ParseCommandLineOptions(
+	    objc, argv.data(), "called from Tcl", &os);
+    if (!result) {
+	Tcl_SetObjResult(interp, Tcl_NewStringObj(s.c_str(), -1));
+	return TCL_ERROR;
+    }
     return TCL_OK;
 }
 
 static void
-LLVMAddCoroutinePassesToExtensionPoints(LLVMPassManagerBuilderRef ref)
+LLVMAddCoroutinePassesToExtensionPoints(
+    LLVMPassManagerBuilderRef ref)
 {
-    llvm::PassManagerBuilder *Builder =
-	reinterpret_cast<llvm::PassManagerBuilder*>(ref);
+    auto Builder = reinterpret_cast<llvm::PassManagerBuilder*>(ref);
     addCoroutinePassesToExtensionPoints(*Builder);
 }
 
