@@ -96,8 +96,8 @@ tclconfig/	This directory contains various template files that build
 
 win/            Files used for building on Windows.
 
-UNIX BUILD (including OSX)
-==========================
+BUILDING
+========
 
 This is a C++ extension, so make sure to set the CC environment variable to a
 c++ compiler (e.g. clang++ or g++).
@@ -112,11 +112,6 @@ example will build and install the extension:
 	$ make
         $ make test
 	$ make install
-
-WINDOWS BUILD
-=============
-
-Not supported, but see the win directory.
 
 INSTALLATION
 ============
