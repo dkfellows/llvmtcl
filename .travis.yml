@@ -7,14 +7,14 @@ addons:
       - llvm-toolchain-trusty-6.0
       - ubuntu-toolchain-r-test
     packages:
-      # Clang and LLVM
+      # LLVM
       - llvm-6.0-dev
       # Tcl
-      - tcl8.6
       - tcl8.6-dev
+      # For testing
+      - tcl8.6
 install:
   - ./configure CC=$CXX --with-llvm-config=llvm-config-6.0
 script:
   - make
-  ### The test can't run correctly; there's a weird interaction between LLVM and Travis
-  #- make test
+  - make test
