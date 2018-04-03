@@ -8,19 +8,12 @@ addons:
       - ubuntu-toolchain-r-test
     packages:
       # Clang and LLVM
-      - clang-6.0
       - llvm-6.0-dev
       # Tcl
       - tcl8.6
       - tcl8.6-dev
-      # Various headers
-      - gcc-6
-      - g++-6
-      - libstdc++6
-      - libc++-dev
-      #- libc++abi1-dev
 install:
-  - ./configure CC=clang++-6.0 --with-llvm-config=llvm-config-6.0
+  - ./configure CC=$CXX --with-llvm-config=llvm-config-6.0
 script:
   - make
   ### The test can't run correctly; there's a weird interaction between LLVM and Travis
