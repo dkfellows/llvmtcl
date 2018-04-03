@@ -17,7 +17,7 @@ addons:
       - gcc-6
       - g++-6
       - libstdc++6
-      #- libc++-dev
+      - libc++-dev
       #- libc++abi1-dev
 install:
   - ./configure CC=clang++-6.0 --with-llvm-config=llvm-config-6.0
