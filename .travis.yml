@@ -14,6 +14,7 @@ addons:
       # For testing
       - tcl8.6
       - libc++1
+      - libc++abi1
 install:
   - ./configure CC=$CXX --with-llvm-config=llvm-config-6.0
 script:
