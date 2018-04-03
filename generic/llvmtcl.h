@@ -7,6 +7,10 @@
 #include "llvm/IR/Value.h"
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
 
+#ifndef MODULE_SCOPE
+#define MODULE_SCOPE extern
+#endif
+
 MODULE_SCOPE int	GetBasicBlockFromObj(Tcl_Interp *interp,
 			    Tcl_Obj *obj, llvm::BasicBlock *&block);
 MODULE_SCOPE int	GetBuilderFromObj(Tcl_Interp *interp, Tcl_Obj *obj,

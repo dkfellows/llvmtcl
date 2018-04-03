@@ -47,7 +47,7 @@ GetLLVMIntrinsicIDFromObj(
 
 	    hPtr = Tcl_CreateHashEntry(
 		    &intrinsicNameHash, intrinsicNames[i], &dummy);
-	    Tcl_SetHashValue(hPtr, reinterpret_cast<const void *>(i + 1));
+	    Tcl_SetHashValue(hPtr, reinterpret_cast<ClientData>(i + 1));
 	}
     }
     Tcl_MutexUnlock(&initLock);
