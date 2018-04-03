@@ -7,11 +7,15 @@ addons:
       - llvm-toolchain-trusty-6.0
       - ubuntu-toolchain-r-test
     packages:
+      # Clang and LLVM
       - clang-6.0
       - llvm-6.0-dev
+      # Tcl
       - tcl8.6
       - tcl8.6-dev
-      - g++-4.9
+      # Various headers
+      - gcc-6
+      - g++-6
       - libstdc++6
       #- libc++-dev
       #- libc++abi1-dev
