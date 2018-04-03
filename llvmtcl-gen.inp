@@ -470,6 +470,8 @@ void LLVMPassManagerBuilderPopulateFunctionPassManager(LLVMPassManagerBuilderRef
 void LLVMPassManagerBuilderPopulateModulePassManager(LLVMPassManagerBuilderRef, LLVMPassManagerRef);
 void LLVMPassManagerBuilderPopulateLTOPassManager(LLVMPassManagerBuilderRef, LLVMPassManagerRef, bool, bool);
 
+void LLVMAddCoroutinePassesToExtensionPoints(LLVMPassManagerBuilderRef);
+
 void LLVMEnablePrettyStackTrace(void);
 
 rename LLVMPrintModuleToString LLVMPrintModuleToStringTcl

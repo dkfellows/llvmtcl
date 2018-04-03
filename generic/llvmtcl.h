@@ -28,7 +28,7 @@ extern "C" double	__powidf2(double a, int b);
 
 #define DECL_CMD(cName) \
     MODULE_SCOPE int cName(ClientData clientData, Tcl_Interp *interp, \
-	    int objc, Tcl_Obj *const objv[]);
+	    int objc, Tcl_Obj *const objv[])
 
 DECL_CMD(BuildDbgValue);
 DECL_CMD(CreateDebugBuilder);
@@ -58,7 +58,9 @@ DECL_CMD(LLVMRemoveAttributeObjCmd);
 DECL_CMD(LLVMGetAttributeObjCmd);
 DECL_CMD(LLVMAddInstrAttributeObjCmd);
 DECL_CMD(LLVMRemoveInstrAttributeObjCmd);
-
+DECL_CMD(LLVMGetIntrinsicDefinitionObjCmd);
+DECL_CMD(LLVMGetIntrinsicIDObjCmd);
+
 template<typename T>//T subclass of llvm::MDNode
 MODULE_SCOPE int	GetMetadataFromObj(Tcl_Interp *interp,
 			    Tcl_Obj *obj, const char *typeName,
@@ -103,6 +105,22 @@ GetValueFromObj(
 	return TCL_ERROR;
     }
     return TCL_OK;
+}
+
+static inline void
+SetStringResult(
+    Tcl_Interp *interp,
+    std::string msg)
+{
+    Tcl_SetObjResult(interp, Tcl_NewStringObj(msg.c_str(), msg.size()));
+}
+
+MODULE_SCOPE Tcl_Obj* SetLLVMValueRefAsObj(
+	Tcl_Interp* interp, LLVMValueRef ref);
+
+static inline Tcl_Obj* SetLLVMValueRefAsObj(
+	Tcl_Interp* interp, llvm::Value *value) {
+    return SetLLVMValueRefAsObj(interp, llvm::wrap(value));
 }
 
 /*
