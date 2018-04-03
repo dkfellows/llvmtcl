@@ -4,17 +4,17 @@ compiler: clang
 addons:
   apt:
     sources:
-      - llvm-toolchain-trusty-4.0
-      #- ubuntu-toolchain-r-test
+      - llvm-toolchain-trusty-6.0
+      - ubuntu-toolchain-r-test
     packages:
-      - clang-4.0
-      - llvm-4.0-dev
-      - gcc
-      - libstdc++-dev
+      - clang-6.0
+      - llvm-6.0-dev
+      - g++-5
+      - libstdc++6-dev
       #- libc++-dev
       #- libc++abi1-dev
 install:
-  - ./configure CC=clang++-4.0 --with-llvm-config=llvm-config-4.0
+  - ./configure CC=clang++-6.0 --with-llvm-config=llvm-config-6.0
 script:
   - make
   ### The test can't run correctly; there's a weird interaction between LLVM and Travis
