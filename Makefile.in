@@ -241,7 +241,8 @@ install-libraries: libraries
 install-doc: doc
 
 test: binaries libraries
-	$(TCLSH) `@CYGPATH@ $(srcdir)/tests/all.tcl` $(TESTFLAGS)
+	@echo Testing: $(lastword $(TCLSH)) tests/all.tcl $(TESTFLAGS)
+	@$(TCLSH) `@CYGPATH@ $(srcdir)/tests/all.tcl` $(TESTFLAGS)
 
 shell: binaries libraries
 	@$(TCLSH) $(SCRIPT)
