@@ -18,7 +18,7 @@ REQUIREMENTS
 ============
 
 - Tcl 8.6
-- LLVM 3.7, 3.8, 3.9, 4.0 or 5.0
+- LLVM 3.7, 3.8, 3.9, 4.0, 5.0 or 6.0
   (4.0 or later is recommended for performance reasons on large functions)
 
 CONTENTS
@@ -96,8 +96,8 @@ tclconfig/	This directory contains various template files that build
 
 win/            Files used for building on Windows.
 
-UNIX BUILD (including OSX)
-==========================
+BUILDING
+========
 
 This is a C++ extension, so make sure to set the CC environment variable to a
 c++ compiler (e.g. clang++ or g++).
@@ -112,11 +112,6 @@ example will build and install the extension:
 	$ make
         $ make test
 	$ make install
-
-WINDOWS BUILD
-=============
-
-Not supported, but see the win directory.
 
 INSTALLATION
 ============

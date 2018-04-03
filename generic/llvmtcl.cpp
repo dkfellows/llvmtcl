@@ -1,39 +1,42 @@
-#include "tcl.h"
-#include "tclTomMath.h"
+#include <tcl.h>
+#include <tclTomMath.h>
 #include <iostream>
 #include <sstream>
 #include <map>
-#include "llvm/Support/raw_ostream.h"
-#include "llvm/Support/TargetRegistry.h"
-#include "llvm/Support/Host.h"
+#include <llvm/Support/raw_ostream.h>
+#include <llvm/Support/TargetRegistry.h>
+#include <llvm/Support/Host.h>
 
 #include "version.h"
 #ifdef API_2
-#include "llvm/IR/PassManager.h"
+#include <llvm/IR/PassManager.h>
 #else // !API_2
-#include "llvm/PassManager.h"
+#include <llvm/PassManager.h>
 #endif // API_2
 
-#include "llvm/Transforms/IPO/PassManagerBuilder.h"
-#include "llvm/Transforms/IPO.h"
-#include "llvm/IR/Instructions.h"
-#include "llvm/IR/Intrinsics.h"
-#include "llvm/IR/DerivedTypes.h"
-#include "llvm/Support/DynamicLibrary.h"
-#include "llvm/ExecutionEngine/ExecutionEngine.h"
-#include "llvm/ExecutionEngine/GenericValue.h"
-#include "llvm/ExecutionEngine/SectionMemoryManager.h"
-#include "llvm-c/Analysis.h"
-#include "llvm-c/Core.h"
-#include "llvm-c/ExecutionEngine.h"
-#include "llvm-c/Target.h"
-#include "llvm-c/TargetMachine.h"
-#include "llvm-c/BitWriter.h"
-#include "llvm-c/BitReader.h"
-#include "llvm-c/Transforms/PassManagerBuilder.h"
-#include "llvm-c/Transforms/IPO.h"
-#include "llvm-c/Transforms/Scalar.h"
-#include "llvm-c/Transforms/Vectorize.h"
+#include <llvm/Transforms/IPO/PassManagerBuilder.h>
+#include <llvm/Transforms/IPO.h>
+#include <llvm/Transforms/Coroutines.h>
+#include <llvm/IR/Instructions.h>
+#include <llvm/IR/Intrinsics.h>
+#include <llvm/IR/DerivedTypes.h>
+#include <llvm/IR/LegacyPassManager.h>
+#include <llvm/Support/CommandLine.h>
+#include <llvm/Support/DynamicLibrary.h>
+#include <llvm/ExecutionEngine/ExecutionEngine.h>
+#include <llvm/ExecutionEngine/GenericValue.h>
+#include <llvm/ExecutionEngine/SectionMemoryManager.h>
+#include <llvm-c/Analysis.h>
+#include <llvm-c/Core.h>
+#include <llvm-c/ExecutionEngine.h>
+#include <llvm-c/Target.h>
+#include <llvm-c/TargetMachine.h>
+#include <llvm-c/BitWriter.h>
+#include <llvm-c/BitReader.h>
+#include <llvm-c/Transforms/PassManagerBuilder.h>
+#include <llvm-c/Transforms/IPO.h>
+#include <llvm-c/Transforms/Scalar.h>
+#include <llvm-c/Transforms/Vectorize.h>
 #include "llvmtcl.h"
 
 TCL_DECLARE_MUTEX(idLock)
@@ -51,11 +54,36 @@ std::string GetRefName(std::string prefix)
 
 #include "generated/llvmtcl-gen-map.h"
 
-static const char *const intrinsicNames[] = {
-#define GET_INTRINSIC_NAME_TABLE
-#include "llvm/IR/Intrinsics.gen"
-#undef GET_INTRINSIC_NAME_TABLE
-};
+static int
+ParseCommandLineOptionsObjCmd(
+    ClientData clientData,
+    Tcl_Interp *interp,
+    int objc,
+    Tcl_Obj *const objv[])
+{
+    std::vector<const char*> argv(objc);
+    for (int i = 0; i < objc; ++i) {
+	argv[i] = Tcl_GetString(objv[i]);
+    }
+
+    std::string s;
+    llvm::raw_string_ostream os(s);
+    bool result = llvm::cl::ParseCommandLineOptions(
+	    objc, argv.data(), "called from Tcl", &os);
+    if (!result) {
+	Tcl_SetObjResult(interp, Tcl_NewStringObj(s.c_str(), -1));
+	return TCL_ERROR;
+    }
+    return TCL_OK;
+}
+
+static void
+LLVMAddCoroutinePassesToExtensionPoints(
+    LLVMPassManagerBuilderRef ref)
+{
+    auto Builder = reinterpret_cast<llvm::PassManagerBuilder*>(ref);
+    addCoroutinePassesToExtensionPoints(*Builder);
+}
 
 static std::string
 LLVMDumpModuleTcl(
@@ -105,14 +133,6 @@ LLVMRunFunction(
     unsigned NumArgs)
 {
     return LLVMRunFunction(EE, F, NumArgs, Args);
-}
-
-static inline void
-SetStringResult(
-    Tcl_Interp *interp,
-    std::string msg)
-{
-    Tcl_SetObjResult(interp, Tcl_NewStringObj(msg.c_str(), msg.size()));
 }
 
 MODULE_SCOPE int
@@ -200,40 +220,6 @@ GetEngineFromObj(
     return TCL_OK;
 }
 
-static int
-GetLLVMIntrinsicIDFromObj(
-    Tcl_Interp *interp,
-    Tcl_Obj *obj,
-    llvm::Intrinsic::ID &id)
-{
-    const char *str = Tcl_GetString(obj);
-    size_t num = sizeof(intrinsicNames)/sizeof(const char *);
-
-    // Linear scan; only thing that works reliably...
-    for (size_t i=0 ; i<num ; i++) {
-	if (!strcmp(str, intrinsicNames[i])) {
-	    id = (llvm::Intrinsic::ID) (i+1);
-	    return TCL_OK;
-	}
-    }
-
-    Tcl_SetObjResult(interp, Tcl_ObjPrintf(
-	    "expected intrinsic name but got \"%s\"", str));
-    return TCL_ERROR;
-}
-
-static Tcl_Obj *
-SetLLVMIntrinsicIDAsObj(
-    unsigned id)
-{
-    if (id <= 0 || id > sizeof(intrinsicNames)/sizeof(const char *)) {
-	return Tcl_NewStringObj("<unknown LLVMIntrinsic>", -1);
-    }
-
-    std::string s = intrinsicNames[id-1];
-    return Tcl_NewStringObj(s.c_str(), -1);
-}
-
 static void
 LLVMDisposeBuilderTcl(
     LLVMBuilderRef builderRef)
@@ -281,7 +267,7 @@ LLVMDeleteBasicBlockTcl(
 }
 
 static int
-LLVMCreateGenericValueOfTclInterpObjCmd(
+CreateGenericValueOfTclInterpObjCmd(
     ClientData clientData,
     Tcl_Interp *interp,
     int objc,
@@ -298,7 +284,7 @@ LLVMCreateGenericValueOfTclInterpObjCmd(
 }
 
 static int
-LLVMCreateGenericValueOfTclObjObjCmd(
+CreateGenericValueOfTclObjObjCmd(
     ClientData clientData,
     Tcl_Interp *interp,
     int objc,
@@ -316,7 +302,7 @@ LLVMCreateGenericValueOfTclObjObjCmd(
 }
 
 static int
-LLVMGenericValueToTclObjObjCmd(
+GenericValueToTclObjObjCmd(
     ClientData clientData,
     Tcl_Interp *interp,
     int objc,
@@ -616,179 +602,6 @@ LLVMCallInitialisePackageFunction(
 }
 
 static int
-LLVMGetIntrinsicDefinitionObjCmd(
-    ClientData clientData,
-    Tcl_Interp *interp,
-    int objc,
-    Tcl_Obj *const objv[])
-{
-    if (objc < 3) {
-        Tcl_WrongNumArgs(interp, 1, objv, "M Name Ty...");
-        return TCL_ERROR;
-    }
-
-    llvm::Module *mod;
-    llvm::Intrinsic::ID id;
-
-    if (GetModuleFromObj(interp, objv[1], mod) != TCL_OK)
-        return TCL_ERROR;
-    if (GetLLVMIntrinsicIDFromObj(interp, objv[2], id) != TCL_OK)
-        return TCL_ERROR;
-
-    /*
-     * The following code is nasty, but not nearly as nasty as a hard crash in
-     * LLVM itself when one of its internal checks fails. First, we parse the
-     * descriptor for the intrinsic (obtained from its ID) to see what type
-     * parameters (if any) are required.
-     */
-
-    llvm::SmallVector<llvm::Intrinsic::IITDescriptor, 8> descs;
-    llvm::Intrinsic::getIntrinsicInfoTableEntries(id, descs);
-    size_t reqs = 0;
-    std::vector<llvm::Intrinsic::IITDescriptor::ArgKind> requiredKinds;
-    for (auto desc : descs) {
-	if (desc.Kind >= llvm::Intrinsic::IITDescriptor::Argument &&
-		desc.Kind <= llvm::Intrinsic::IITDescriptor::PtrToArgument) {
-	    size_t num = 1 + desc.getArgumentNumber();
-	    reqs = (num>reqs ? num : reqs);
-	    while (requiredKinds.size() < num)
-		requiredKinds.push_back(llvm::Intrinsic::IITDescriptor::AK_Any);
-	    requiredKinds[desc.getArgumentNumber()] = desc.getArgumentKind();
-	}
-    }
-
-    /*
-     * Now we can validate the arguments. First the total number...
-     */
-
-    if (requiredKinds.size() != (size_t) objc - 3) {
-	Tcl_SetObjResult(interp, Tcl_ObjPrintf(
-		"%s is overloaded; %d type arguments must be specified",
-		Tcl_GetString(objv[2]), (int) requiredKinds.size()));
-	if (requiredKinds.size()) {
-	    const char *sep = " (";
-	    for (auto kind : requiredKinds) {
-		Tcl_AppendResult(interp, sep, NULL);
-		sep = ", ";
-		switch (kind) {
-		case llvm::Intrinsic::IITDescriptor::AK_Any:
-		    Tcl_AppendResult(interp, "any", NULL);
-		    break;
-		case llvm::Intrinsic::IITDescriptor::AK_AnyInteger:
-		    Tcl_AppendResult(interp, "integer", NULL);
-		    break;
-		case llvm::Intrinsic::IITDescriptor::AK_AnyFloat:
-		    Tcl_AppendResult(interp, "float", NULL);
-		    break;
-		case llvm::Intrinsic::IITDescriptor::AK_AnyVector:
-		    Tcl_AppendResult(interp, "vector", NULL);
-		    break;
-		case llvm::Intrinsic::IITDescriptor::AK_AnyPointer:
-		    Tcl_AppendResult(interp, "pointer", NULL);
-		    break;
-		}
-	    }
-	    Tcl_AppendResult(interp, ")", NULL);
-	}
-	return TCL_ERROR;
-    }
-
-    /*
-     * ... and lastly we check that the type arguments passed are actually
-     * acceptable.
-     */
-
-    std::vector<llvm::Type *> arg_types;
-    for (size_t i = 0 ; i<requiredKinds.size() ; i++) {
-	auto kind = requiredKinds[i];
-	llvm::Type *ty;
-
-	if (GetTypeFromObj(interp, objv[i + 3], ty) != TCL_OK)
-	    return TCL_ERROR;
-	arg_types.push_back(ty);
-
-	/*
-	 * Do the real argument type check if required.
-	 */
-
-	switch (kind) {
-	case llvm::Intrinsic::IITDescriptor::AK_Any:
-	    // 0 means any type is acceptable
-	    break;
-	case llvm::Intrinsic::IITDescriptor::AK_AnyInteger:
-	    if (!ty->isIntegerTy()) {
-		Tcl_SetObjResult(interp, Tcl_ObjPrintf(
-			"argument %d to %s must be an integer type",
-			(int) i + 1, Tcl_GetString(objv[2])));
-		return TCL_ERROR;
-	    }
-	    break;
-	case llvm::Intrinsic::IITDescriptor::AK_AnyFloat:
-	    if (!ty->isFloatingPointTy()) {
-		Tcl_SetObjResult(interp, Tcl_ObjPrintf(
-			"type argument %d to %s must be a floating point type",
-			(int) i + 1, Tcl_GetString(objv[2])));
-		return TCL_ERROR;
-	    }
-	    break;
-	case llvm::Intrinsic::IITDescriptor::AK_AnyVector:
-	    if (!ty->isVectorTy()) {
-		Tcl_SetObjResult(interp, Tcl_ObjPrintf(
-			"type argument %d to %s must be a vector type",
-			(int) i + 1, Tcl_GetString(objv[2])));
-		return TCL_ERROR;
-	    }
-	    break;
-	case llvm::Intrinsic::IITDescriptor::AK_AnyPointer:
-	    if (!ty->isPointerTy()) {
-		Tcl_SetObjResult(interp, Tcl_ObjPrintf(
-			"type argument %d to %s must be a pointer type",
-			(int) i + 1, Tcl_GetString(objv[2])));
-		return TCL_ERROR;
-	    }
-	    break;
-	}
-    }
-
-    /*
-     * This really ought to work now. We don't assume that it *must* though.
-     */
-
-    auto intrinsic = llvm::Intrinsic::getDeclaration(mod, id, arg_types);
-    if (intrinsic == NULL) {
-	SetStringResult(interp, "no such intrinsic");
-	return TCL_ERROR;
-    }
-
-    Tcl_SetObjResult(interp,
-	    SetLLVMValueRefAsObj(interp, llvm::wrap(intrinsic)));
-    return TCL_OK;
-}
-
-static int
-LLVMGetIntrinsicIDObjCmd(
-    ClientData clientData,
-    Tcl_Interp *interp,
-    int objc,
-    Tcl_Obj *const objv[])
-{
-    if (objc != 2) {
-        Tcl_WrongNumArgs(interp, 1, objv, "Fn ");
-        return TCL_ERROR;
-    }
-
-    LLVMValueRef intrinsic = 0;
-    if (GetLLVMValueRefFromObj(interp, objv[1], intrinsic) != TCL_OK)
-        return TCL_ERROR;
-
-    unsigned id = LLVMGetIntrinsicID(intrinsic);
-
-    if (id != 0)
-	Tcl_SetObjResult(interp, SetLLVMIntrinsicIDAsObj(id));
-    return TCL_OK;
-}
-
-static int
 NamedStructTypeObjCmd(
     ClientData clientData,
     Tcl_Interp *interp,
@@ -824,6 +637,46 @@ NamedStructTypeObjCmd(
     return TCL_OK;
 }
 
+/*
+ * -------------------------------------------------------------------
+ *
+ * InstallStdio --
+ *
+ *	Map stdin, stdout, and stderr explicitly; they're usually macros in C
+ *	and that makes them normally unavailable from the LLVM level without
+ *	using platform-specific hacks.
+ *
+ * -------------------------------------------------------------------
+ */
+
+static void
+InstallStdio(
+    LLVMModuleRef mod,
+    LLVMExecutionEngineRef eeRef)
+{
+    auto m = llvm::unwrap(mod);
+    auto engine = llvm::unwrap(eeRef);
+    auto void_ptr_type = llvm::Type::getInt8PtrTy(m->getContext());
+
+    engine->addGlobalMapping(llvm::cast<llvm::GlobalVariable>(
+	    m->getOrInsertGlobal("stdin", void_ptr_type)), stdin);
+    engine->addGlobalMapping(llvm::cast<llvm::GlobalVariable>(
+	    m->getOrInsertGlobal("stdout", void_ptr_type)), stdout);
+    engine->addGlobalMapping(llvm::cast<llvm::GlobalVariable>(
+	    m->getOrInsertGlobal("stderr", void_ptr_type)), stderr);
+}
+
+static void
+PatchRuntimeEnvironment(
+    LLVMExecutionEngineRef eeRef)
+{
+    // Replace a part of the LLVM runtime that's not always present
+
+    auto engine = llvm::unwrap(eeRef);
+    const void *powidf2 = (const void *) __powidf2;
+    engine->addGlobalMapping("__powidf2", (uint64_t) powidf2);
+}
+
 static int
 CreateMCJITCompilerForModuleObjCmd(
     ClientData clientData,
@@ -831,8 +684,8 @@ CreateMCJITCompilerForModuleObjCmd(
     int objc,
     Tcl_Obj *const objv[])
 {
-    if (objc != 2 && objc != 3) {
-        Tcl_WrongNumArgs(interp, 1, objv, "M ?OptLevel? ");
+    if (objc < 2 || objc > 4) {
+        Tcl_WrongNumArgs(interp, 1, objv, "M ?OptLevel? ?EnableStdio?");
         return TCL_ERROR;
     }
 
@@ -840,41 +693,31 @@ CreateMCJITCompilerForModuleObjCmd(
     if (GetLLVMModuleRefFromObj(interp, objv[1], mod) != TCL_OK)
         return TCL_ERROR;
     int level = 0;
-    if (objc == 3 && Tcl_GetIntFromObj(interp, objv[2], &level) != TCL_OK)
+    if (objc >= 3 && Tcl_GetIntFromObj(interp, objv[2], &level) != TCL_OK)
+	return TCL_ERROR;
+    int enableStdio = 1;
+    if (objc >= 4 && Tcl_GetBooleanFromObj(interp, objv[3], &enableStdio) != TCL_OK)
 	return TCL_ERROR;
 
     LLVMMCJITCompilerOptions options;
     LLVMInitializeMCJITCompilerOptions(&options, sizeof(options));
     options.OptLevel = (unsigned) level;
 
-    // Map stdin, stdout, and stderr explicitly; they're usually macros in C
-    // and that makes them normall unavailable from the LLVM level without
-    // using platform-specific hacks.
-    auto m = llvm::unwrap(mod);
-    auto ptr_type = llvm::Type::getInt8PtrTy(m->getContext());
-    auto std_in = llvm::cast<llvm::GlobalVariable>(
-	    m->getOrInsertGlobal("stdin", ptr_type));
-    auto std_out = llvm::cast<llvm::GlobalVariable>(
-	    m->getOrInsertGlobal("stdout", ptr_type));
-    auto std_err = llvm::cast<llvm::GlobalVariable>(
-	    m->getOrInsertGlobal("stderr", ptr_type));
-
     LLVMExecutionEngineRef eeRef = 0; // output argument (engine)
     char *error = 0; // output argument (error message)
-    LLVMBool failed = LLVMCreateMCJITCompilerForModule(&eeRef, mod,
-	    &options, sizeof(options), &error);
-
-    if (failed) {
+    if (LLVMCreateMCJITCompilerForModule(&eeRef, mod,
+	    &options, sizeof(options), &error)) {
 	Tcl_SetObjResult(interp, Tcl_NewStringObj(error, -1));
 	return TCL_ERROR;
     }
 
-    auto engine = llvm::unwrap(eeRef);
-    engine->addGlobalMapping(std_in, stdin);
-    engine->addGlobalMapping(std_out, stdout);
-    engine->addGlobalMapping(std_err, stderr);
-
-    engine->addGlobalMapping("__powidf2", (uint64_t) ((void *) __powidf2));
+    // Replace a part of the LLVM runtime that's not always present
+    PatchRuntimeEnvironment(eeRef);
+    // Map stdin, stdout, and stderr explicitly; they're usually macros in C
+    // and that makes them normally unavailable from the LLVM level without
+    // using platform-specific hacks.
+    if (enableStdio)
+	InstallStdio(mod, eeRef);
 
     Tcl_SetObjResult(interp, SetLLVMExecutionEngineRefAsObj(interp, eeRef));
     return TCL_OK;
@@ -940,6 +783,7 @@ CreateModuleFromBitcodeCmd(
     char *msg = NULL;
     LLVMMemoryBufferRef buffer = NULL;
     LLVMModuleRef module = NULL;
+    LLVMBool failed;
 
     if (objc != 2) {
 	Tcl_WrongNumArgs(interp, 1, objv, "Filename");
@@ -949,11 +793,10 @@ CreateModuleFromBitcodeCmd(
     if (LLVMCreateMemoryBufferWithContentsOfFile(Tcl_GetString(objv[1]),
 	    &buffer, &msg))
 	goto error;
-    if (LLVMParseBitcode(buffer, &module, &msg)) {
-	LLVMDisposeMemoryBuffer(buffer);
-	goto error;
-    }
+    failed = LLVMParseBitcode(buffer, &module, &msg);
     LLVMDisposeMemoryBuffer(buffer);
+    if (failed)
+	goto error;
 
     Tcl_SetObjResult(interp, SetLLVMModuleRefAsObj(NULL, module));
     return TCL_OK;
@@ -1006,12 +849,12 @@ GarbageCollectUnusedFunctionsInModuleCmd(
 		    (fn.getVisibility() == llvm::GlobalValue::HiddenVisibility
 		    || fn.isDeclaration())) {
 		to_delete.push_back(&fn);
-		didDeletion = true;
 	    }
 	}
 
 	for (auto f = to_delete.begin() ; f != to_delete.end() ; ++f) {
 	    (*f)->eraseFromParent();
+	    didDeletion = true;
 	}
 
 	/*
@@ -1083,7 +926,7 @@ WriteModuleMachineCodeToFileCmd(
 
 #ifdef API_3
 static int
-LLVMTokenTypeObjCmd(
+TokenTypeObjCmd(
     ClientData clientData,
     Tcl_Interp *interp,
     int objc,
@@ -1101,7 +944,7 @@ LLVMTokenTypeObjCmd(
 }
 
 static int
-LLVMConstNoneObjCmd(
+ConstNoneObjCmd(
     ClientData clientData,
     Tcl_Interp *interp,
     int objc,
@@ -1127,7 +970,7 @@ StoreExternalStringInTclVar(
 {
     Tcl_DString buf;
     Tcl_DStringInit(&buf);
-    auto internString = Tcl_ExternalToUtfDString(
+    const auto internString = Tcl_ExternalToUtfDString(
 	    Tcl_GetEncoding(interp, NULL), externString, -1, &buf);
     auto result = Tcl_SetVar(interp, tclVariable, internString,
 	    TCL_GLOBAL_ONLY|TCL_LEAVE_ERR_MSG);
@@ -1135,8 +978,23 @@ StoreExternalStringInTclVar(
     return result;
 }
 
-#define LLVMObjCmd(tclName, cName) \
-  Tcl_CreateObjCommand(interp, tclName, (Tcl_ObjCmdProc*)cName, (ClientData)NULL, (Tcl_CmdDeleteProc*)NULL)
+static inline void
+DefineCommand(
+    Tcl_Interp *interp,
+    const char *tclName,
+    Tcl_ObjCmdProc *cName)
+{
+    // Theoretically, this can blow up. It only actually does this if
+    // the interpreter is being deleted.
+    Tcl_CreateObjCommand(interp, tclName, cName, nullptr, nullptr);
+}
+
+#define LLVMObjCmd(tclName, cName)  DefineCommand(interp, "::" tclName, cName)
+#define LLVMStrVar(varName, value) \
+    do { \
+	if (StoreExternalStringInTclVar(interp, "::" varName, value) == NULL)\
+	    return TCL_ERROR;\
+    } while (false)\
 
 extern "C" {
 DLLEXPORT int Llvmtcl_Init(Tcl_Interp *interp)
@@ -1150,23 +1008,35 @@ DLLEXPORT int Llvmtcl_Init(Tcl_Interp *interp)
     if (Tcl_PkgProvide(interp, PACKAGE_NAME, PACKAGE_VERSION) != TCL_OK)
 	return TCL_ERROR;
 
+    if (LLVMInitializeNativeTarget() || LLVMInitializeNativeAsmPrinter()) {
+	Tcl_AppendResult(interp, "failed to initialise native target", NULL);
+	return TCL_ERROR;
+    }
+
 #include "generated/llvmtcl-gen-cmddef.h"
+
+    LLVMObjCmd("llvmtcl::ParseCommandLineOptions",
+	    ParseCommandLineOptionsObjCmd);
 #ifdef API_3
-    LLVMObjCmd("llvmtcl::TokenType", LLVMTokenTypeObjCmd);
-    LLVMObjCmd("llvmtcl::ConstNone", LLVMConstNoneObjCmd);
+    LLVMObjCmd("llvmtcl::TokenType", TokenTypeObjCmd);
+    LLVMObjCmd("llvmtcl::ConstNone", ConstNoneObjCmd);
 #endif // API_3
-    LLVMObjCmd("llvmtcl::CreateGenericValueOfTclInterp", LLVMCreateGenericValueOfTclInterpObjCmd);
-    LLVMObjCmd("llvmtcl::CreateGenericValueOfTclObj", LLVMCreateGenericValueOfTclObjObjCmd);
-    LLVMObjCmd("llvmtcl::GenericValueToTclObj", LLVMGenericValueToTclObjObjCmd);
+    LLVMObjCmd("llvmtcl::CreateGenericValueOfTclInterp",
+	    CreateGenericValueOfTclInterpObjCmd);
+    LLVMObjCmd("llvmtcl::CreateGenericValueOfTclObj",
+	    CreateGenericValueOfTclObjObjCmd);
+    LLVMObjCmd("llvmtcl::GenericValueToTclObj", GenericValueToTclObjObjCmd);
     LLVMObjCmd("llvmtcl::AddLLVMTclCommands", LLVMAddLLVMTclCommandsObjCmd);
     LLVMObjCmd("llvmtcl::AddIncoming", LLVMAddIncomingObjCmd);
     LLVMObjCmd("llvmtcl::BuildAggregateRet", LLVMBuildAggregateRetObjCmd);
     LLVMObjCmd("llvmtcl::BuildInvoke", LLVMBuildInvokeObjCmd);
     LLVMObjCmd("llvmtcl::GetParamTypes", LLVMGetParamTypesObjCmd);
     LLVMObjCmd("llvmtcl::GetParams", LLVMGetParamsObjCmd);
-    LLVMObjCmd("llvmtcl::GetStructElementTypes", LLVMGetStructElementTypesObjCmd);
+    LLVMObjCmd("llvmtcl::GetStructElementTypes",
+	    LLVMGetStructElementTypesObjCmd);
     LLVMObjCmd("llvmtcl::GetBasicBlocks", LLVMGetBasicBlocksObjCmd);
-    LLVMObjCmd("llvmtcl::CallInitialisePackageFunction", LLVMCallInitialisePackageFunction);
+    LLVMObjCmd("llvmtcl::CallInitialisePackageFunction",
+	    LLVMCallInitialisePackageFunction);
     LLVMObjCmd("llvmtcl::GetIntrinsicDefinition",
 	    LLVMGetIntrinsicDefinitionObjCmd);
     LLVMObjCmd("llvmtcl::GetIntrinsicID", LLVMGetIntrinsicIDObjCmd);
@@ -1175,7 +1045,8 @@ DLLEXPORT int Llvmtcl_Init(Tcl_Interp *interp)
 	    CreateMCJITCompilerForModuleObjCmd);
     LLVMObjCmd("llvmtcl::GetHostTriple", GetHostTripleObjCmd);
     LLVMObjCmd("llvmtcl::CopyModuleFromModule", CopyModuleFromModuleCmd);
-    LLVMObjCmd("llvmtcl::CreateModuleFromBitcode", CreateModuleFromBitcodeCmd);
+    LLVMObjCmd("llvmtcl::CreateModuleFromBitcode",
+	    CreateModuleFromBitcodeCmd);
     LLVMObjCmd("llvmtcl::GarbageCollectUnusedFunctionsInModule",
 	    GarbageCollectUnusedFunctionsInModuleCmd);
     LLVMObjCmd("llvmtcl::WriteModuleMachineCodeToFile",
@@ -1211,22 +1082,21 @@ DLLEXPORT int Llvmtcl_Init(Tcl_Interp *interp)
     LLVMObjCmd("llvmtcl::AddCallAttribute", LLVMAddInstrAttributeObjCmd);
     LLVMObjCmd("llvmtcl::RemoveCallAttribute", LLVMRemoveInstrAttributeObjCmd);
 
-    LLVMInitializeNativeTarget();
-    LLVMInitializeNativeAsmPrinter();
-
-    if (StoreExternalStringInTclVar(interp, "::llvmtcl::llvm_version",
-	    LLVM_VERSION_STRING) == NULL)
-	return TCL_ERROR;
-    if (StoreExternalStringInTclVar(interp, "::llvmtcl::host_triple",
-	    LLVMTCL_TARGET) == NULL)
-	return TCL_ERROR;
-    if (StoreExternalStringInTclVar(interp, "::llvmtcl::llvmbindir",
-	    LLVMBINDIR) == NULL)
-	return TCL_ERROR;
+    LLVMStrVar("llvmtcl::llvm_version", LLVM_VERSION_STRING);
+    LLVMStrVar("llvmtcl::host_triple", LLVMTCL_TARGET);
+    LLVMStrVar("llvmtcl::llvmbindir", LLVMBINDIR);
 
     return TCL_OK;
 }
 
+DLLEXPORT int Llvmtcl_SafeInit(Tcl_Interp *interp)
+{
+    if (Tcl_InitStubs(interp, TCL_VERSION, 0) == NULL)
+	return TCL_ERROR;
+    Tcl_AppendResult(interp, "extension is completely unsafe", NULL);
+    return TCL_ERROR;
+}
+
 } /* extern "C" */
 
 /*

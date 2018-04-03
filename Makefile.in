@@ -21,7 +21,7 @@
 
 #SAMPLE_NEW_VAR	= @SAMPLE_NEW_VAR@
 LLVMCOMPONENTS = core engine codegen native bitwriter bitreader \
-	mcjit linker interpreter ipo
+	mcjit linker interpreter ipo coroutines
 LLVMCONFIG = @LLVMCONFIG@
 LLVMCFLAGS = `${LLVMCONFIG} --cxxflags`
 LLVMLFLAGS = `${LLVMCONFIG} --ldflags`

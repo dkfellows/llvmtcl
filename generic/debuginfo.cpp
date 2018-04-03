@@ -446,9 +446,11 @@ DefineBasicType(
     if (GetDIBuilderFromObj(interp, objv[1], builder) != TCL_OK)
 	return TCL_ERROR;
     std::string name = Tcl_GetString(objv[2]);
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wunused-variable"
-    int size, align = 0, dwarfTypeCode;
+
+#ifndef API_4
+    int align = 0;
+#endif
+    int size, dwarfTypeCode;
     if (Tcl_GetIntFromObj(interp, objv[3], &size) != TCL_OK)
 	return TCL_ERROR;
     if (Tcl_GetIntFromObj(interp, objv[4], &dwarfTypeCode) != TCL_OK)
@@ -459,8 +461,6 @@ DefineBasicType(
 					(uint64_t) align,
 #endif // !API_4
 					(unsigned) dwarfTypeCode);
-#pragma clang diagnostic pop
-
     Tcl_SetObjResult(interp, NewMetadataObj(val, "BasicType"));
     return TCL_OK;
 }
@@ -899,8 +899,11 @@ BuildDbgValue(
 
     auto expr = builder->createExpression(); // Dummy
 
-    auto inst = builder->insertDbgValueIntrinsic(val, 0, varInfo, expr,
-	    location, b->GetInsertBlock());
+    auto inst = builder->insertDbgValueIntrinsic(val,
+#ifndef API_6
+	    0,
+#endif // !API_6
+	    varInfo, expr, location, b->GetInsertBlock());
 
     Tcl_SetObjResult(interp, NewValueObj(inst));
     return TCL_OK;

@@ -13,7 +13,7 @@ REQUIREMENTS
 ============
 
 * Tcl 8.6
-* LLVM 3.7, 3.8, 3.9, 4.0 or 5.0 (4.0 or later is recommended for performance reasons on large functions)
+* LLVM 3.7, 3.8, 3.9, 4.0, 5.0 or 6.0 (4.0 or later is recommended for performance reasons on large functions; the developers normally only check to see if builds work from 4.0 onwards)
 * Optional: CMake for Windows Build
 
 CONTENTS
@@ -76,7 +76,7 @@ You can build the `llvmtcl` package with VisualStudio 12 like this:
 64-Bit Build
 ------------
 
-You need to have built llvm-3.6 with CMake for x64 and should have an installed Tcl (e.g. ActiveTcl x64).
+You need to have built LLVM (e.g., 4.0) with CMake for x64 and should have an installed Tcl (e.g. ActiveTcl x64).
 
     c:\devel\tclllvm> md build_x64
     c:\devel\tclllvm> cd build_x64
@@ -84,11 +84,11 @@ You need to have built llvm-3.6 with CMake for x64 and should have an installed 
     c:\devel\tclllvm\build_x64> msbuild llvmtcl.sln /t:Build /p:Configuration=RelWithDebInfo /p:Platform="x64"
 
 If you want to install the build, you can use the INSTALL target, which will install it in the location given
-by the `CMAKE_INSTALL_PREFIX` in a subdir like `lib/llvmtcl3.6`.
+by the `CMAKE_INSTALL_PREFIX` in a subdir like `lib/llvmtcl3.9`.
 
 32-Bit Build
 ------------
-You need to have built llvm-3.6 with CMake for x86 and should have an installed Tcl (e.g. ActiveTcl win32).
+You need to have built LLVM (e.g., 4.0) with CMake for x86 and should have an installed Tcl (e.g. ActiveTcl win32).
 
     c:\devel\tclllvm> md build_x86
     c:\devel\tclllvm> cd build_x86
@@ -96,7 +96,7 @@ You need to have built llvm-3.6 with CMake for x86 and should have an installed 
     c:\devel\tclllvm\build_x86> msbuild llvmtcl.sln /t:Build /p:Configuration=RelWithDebInfo /p:Platform="Win32"
 
 If you want to install the build, you can use the INSTALL target, which will install it in the location given
-by the `CMAKE_INSTALL_PREFIX` in a subdir like `lib/llvmtcl3.6`.
+by the `CMAKE_INSTALL_PREFIX` in a subdir like `lib/llvmtcl3.9`.
 
 INSTALLATION
 ============
