@@ -256,9 +256,8 @@ LLVMAddAttributeObjCmd(
     if (GetAttrFromObj(interp, objv[2], attr) != TCL_OK)
 	return TCL_ERROR;
     if (AttributeFuncs::typeIncompatible(arg->getType()).contains(attr)) {
-	Tcl_SetObjResult(interp, Tcl_NewStringObj(
-		"attribute cannot be applied to arguments of that type",
-		-1));
+	SetStringResult(interp,
+		"attribute cannot be applied to arguments of that type");
 	return TCL_ERROR;
     }
 
@@ -390,8 +389,7 @@ LLVMAddInstrAttributeObjCmd(
         return TCL_ERROR;
     CallSite call(instr);
     if (!instr) {
-	Tcl_SetObjResult(interp, Tcl_NewStringObj(
-		"expected call or invoke instruction", -1));
+	SetStringResult(interp, "expected call or invoke instruction");
 	return TCL_ERROR;
     }
     int iarg2 = 0;
@@ -433,8 +431,7 @@ LLVMRemoveInstrAttributeObjCmd(
         return TCL_ERROR;
     CallSite call(instr);
     if (!instr) {
-	Tcl_SetObjResult(interp, Tcl_NewStringObj(
-		"expected call or invoke instruction", -1));
+	SetStringResult(interp, "expected call or invoke instruction");
 	return TCL_ERROR;
     }
     int iarg2 = 0;

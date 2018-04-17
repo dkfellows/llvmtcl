@@ -728,8 +728,7 @@ DefineParameter(
     if (Tcl_GetIntFromObj(interp, objv[4], &argIndex) != TCL_OK)
 	return TCL_ERROR;
     if (argIndex < 1) {
-	Tcl_SetObjResult(interp, Tcl_NewStringObj(
-		"argument indices must be at least 1", -1));
+	SetStringResult(interp, "argument indices must be at least 1");
 	return TCL_ERROR;
     }
     DIFile *file;
@@ -877,7 +876,7 @@ BuildDbgValue(
 {
     if (objc != 6) {
 	Tcl_WrongNumArgs(interp, 1, objv,
-		"dibuilder builder value location variableInfo");
+		"DIBuilder builder value location variableInfo");
 	return TCL_ERROR;
     }
 

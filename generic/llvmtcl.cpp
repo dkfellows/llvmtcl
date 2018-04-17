@@ -55,6 +55,15 @@ std::string GetRefName(std::string prefix)
 
 #include "generated/llvmtcl-gen-map.h"
 
+static inline void
+TrimRight(
+    std::string &msg)
+{
+    while (msg.length() > 0
+	    && (msg[msg.length() - 1] == 'n' || msg[msg.length() - 1] == '\r'))
+	msg.pop_back();
+}
+
 static int
 ParseCommandLineOptionsObjCmd(
     ClientData clientData,
@@ -72,7 +81,8 @@ ParseCommandLineOptionsObjCmd(
     bool result = llvm::cl::ParseCommandLineOptions(
 	    objc, argv.data(), "called from Tcl", &os);
     if (!result) {
-	Tcl_SetObjResult(interp, Tcl_NewStringObj(s.c_str(), -1));
+	TrimRight(s);
+	SetStringResult(interp, s);
 	return TCL_ERROR;
     }
     return TCL_OK;
@@ -598,7 +608,8 @@ static int VerifyFunctionObjCmd(
     std::string Messages;
     llvm::raw_string_ostream MsgsOS(Messages);
     if (llvm::verifyFunction(*fun, &MsgsOS)) {
-	Tcl_SetObjResult(interp, Tcl_NewStringObj(Messages.c_str(), -1));
+	TrimRight(Messages);
+	SetStringResult(interp, Messages);
 	return TCL_ERROR;
     }
     return TCL_OK;
@@ -640,7 +651,8 @@ static int VerifyModuleObjCmd(
     if (dbnonfatal)
 	debugInfo = &DebugInfoBroken;
     if (llvm::verifyModule(*mod, &MsgsOS, debugInfo)) {
-	Tcl_SetObjResult(interp, Tcl_NewStringObj(Messages.c_str(), -1));
+	TrimRight(Messages);
+	SetStringResult(interp, Messages);
 	return TCL_ERROR;
     }
     if (dbnonfatal) {
@@ -788,7 +800,7 @@ CreateMCJITCompilerForModuleObjCmd(
     char *error = 0; // output argument (error message)
     if (LLVMCreateMCJITCompilerForModule(&eeRef, mod,
 	    &options, sizeof(options), &error)) {
-	Tcl_SetObjResult(interp, Tcl_NewStringObj(error, -1));
+	SetStringResult(interp, error);
 	return TCL_ERROR;
     }
 
@@ -815,8 +827,7 @@ GetHostTripleObjCmd(
 	Tcl_WrongNumArgs(interp, 1, objv, "");
 	return TCL_ERROR;
     }
-    auto triple = llvm::sys::getProcessTriple();
-    Tcl_SetObjResult(interp, Tcl_NewStringObj(triple.c_str(), -1));
+    SetStringResult(interp, llvm::sys::getProcessTriple());
     return TCL_OK;
 }
 
@@ -883,7 +894,7 @@ CreateModuleFromBitcodeCmd(
     return TCL_OK;
 
   error:
-    Tcl_SetObjResult(interp, Tcl_NewStringObj(msg, -1));
+    SetStringResult(interp, msg);
     free(msg);
     return TCL_ERROR;
 }
@@ -901,9 +912,8 @@ GarbageCollectUnusedFunctionsInModuleCmd(
 	Tcl_WrongNumArgs(interp, 1, objv, "Module");
 	return TCL_ERROR;
     }
-    if (GetModuleFromObj(interp, objv[1], module) != TCL_OK) {
+    if (GetModuleFromObj(interp, objv[1], module) != TCL_OK)
 	return TCL_ERROR;
-    }
 
     bool didDeletion;
     do {
@@ -985,7 +995,7 @@ WriteModuleMachineCodeToFileCmd(
     LLVMTargetRef target;
     char *err;
     if (LLVMGetTargetFromTriple(triple, &target, &err)) {
-	Tcl_SetResult(interp, err, TCL_VOLATILE);
+	SetStringResult(interp, err);
 	LLVMDisposeMessage(err);
 	return TCL_ERROR;
     }
@@ -996,7 +1006,7 @@ WriteModuleMachineCodeToFileCmd(
 	    level, LLVMRelocPIC, LLVMCodeModelDefault);
     if (LLVMTargetMachineEmitToFile(targetMachine, llvm::wrap(module),
 	    file, dumpType, &err)) {
-	Tcl_SetResult(interp, err, TCL_VOLATILE);
+	SetStringResult(interp, err);
 	LLVMDisposeMessage(err);
 	LLVMDisposeTargetMachine(targetMachine);
 	return TCL_ERROR;
@@ -1090,7 +1100,7 @@ DLLEXPORT int Llvmtcl_Init(Tcl_Interp *interp)
 	return TCL_ERROR;
 
     if (LLVMInitializeNativeTarget() || LLVMInitializeNativeAsmPrinter()) {
-	Tcl_AppendResult(interp, "failed to initialise native target", NULL);
+	SetStringResult(interp, "failed to initialise native target");
 	return TCL_ERROR;
     }
 
@@ -1176,7 +1186,7 @@ DLLEXPORT int Llvmtcl_SafeInit(Tcl_Interp *interp)
 {
     if (Tcl_InitStubs(interp, TCL_VERSION, 0) == NULL)
 	return TCL_ERROR;
-    Tcl_AppendResult(interp, "extension is completely unsafe", NULL);
+    SetStringResult(interp, "extension is completely unsafe");
     return TCL_ERROR;
 }
 
