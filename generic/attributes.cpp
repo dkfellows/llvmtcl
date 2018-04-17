@@ -440,7 +440,7 @@ LLVMRemoveInstrAttributeObjCmd(
     int iarg2 = 0;
     if (Tcl_GetIntFromObj(interp, objv[2], &iarg2) != TCL_OK)
         return TCL_ERROR;
-    unsigned index = (unsigned)iarg2;
+    unsigned index = unsigned(iarg2);
     Attribute::AttrKind attr;
     if (GetAttrFromObj(interp, objv[3], attr) != TCL_OK)
 	return TCL_ERROR;

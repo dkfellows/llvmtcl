@@ -2,6 +2,9 @@
 #include <tcl.h>
 #include <llvm/IR/Intrinsics.h>
 #include <llvm-c/Core.h>
+#include <unordered_map>
+#include <string>
+#include <stdexcept>
 
 /*
  * Manage the table of intrinsic functions. This table is driven by LLVM's
@@ -21,33 +24,30 @@ static const char *const intrinsicNames[] = {
 #undef GET_INTRINSIC_NAME_TABLE
 };
 
+using namespace std;
+using namespace llvm;
+
 TCL_DECLARE_MUTEX(initLock)
+static unordered_map<string, Intrinsic::ID> *intrMap;
+static bool intrMapInit = false;
 
 static inline int
 GetLLVMIntrinsicIDFromObj(
     Tcl_Interp *interp,
     Tcl_Obj *obj,
-    llvm::Intrinsic::ID &id)
+    Intrinsic::ID &id)
 {
-    static Tcl_HashTable intrinsicNameHash;
-    static int intrinsicNameHashInit = 0;
-    Tcl_HashEntry *hPtr;
-
     /*
-     * Initialise the hash table if it wasn't already.
+     * Initialise the mapping if it wasn't already.
      */
 
     Tcl_MutexLock(&initLock);
-    if (!intrinsicNameHashInit) {
+    if (!intrMapInit) {
 	const size_t num = sizeof(intrinsicNames) / sizeof(const char *);
-	intrinsicNameHashInit = 1;
-	Tcl_InitHashTable(&intrinsicNameHash, TCL_STRING_KEYS);
+	intrMapInit = true;
+	intrMap = new unordered_map<string, Intrinsic::ID>();
 	for (size_t i=0 ; i<num ; i++) {
-	    int dummy;
-
-	    hPtr = Tcl_CreateHashEntry(
-		    &intrinsicNameHash, intrinsicNames[i], &dummy);
-	    Tcl_SetHashValue(hPtr, reinterpret_cast<ClientData>(i + 1));
+	    (*intrMap)[intrinsicNames[i]] = static_cast<Intrinsic::ID>(i + 1);
 	}
     }
     Tcl_MutexUnlock(&initLock);
@@ -56,14 +56,13 @@ GetLLVMIntrinsicIDFromObj(
      * Do the search.
      */
 
-    hPtr = Tcl_FindHashEntry(&intrinsicNameHash, Tcl_GetString(obj));
-    if (hPtr == NULL) {
+    auto search = intrMap->find(Tcl_GetString(obj));
+    if (search == intrMap->end()) {
 	Tcl_SetObjResult(interp, Tcl_ObjPrintf(
 		"expected intrinsic name but got \"%s\"", Tcl_GetString(obj)));
 	return TCL_ERROR;
     }
-    id = static_cast<llvm::Intrinsic::ID>(reinterpret_cast<size_t>(
-	    Tcl_GetHashValue(hPtr)));
+    id = search->second;
     return TCL_OK;
 }
 
@@ -75,7 +74,7 @@ SetLLVMIntrinsicIDAsObj(
 	return Tcl_NewStringObj("<unknown LLVMIntrinsic>", -1);
     }
 
-    std::string s = intrinsicNames[id - 1];
+    string s = intrinsicNames[id - 1];
     return Tcl_NewStringObj(s.c_str(), -1);
 }
 
@@ -89,28 +88,28 @@ static inline void
 MakeIntrinsicIsOverloadedError(
     Tcl_Interp *interp,
     Tcl_Obj *objPtr,
-    const std::vector<llvm::Intrinsic::IITDescriptor::ArgKind> &kinds)
+    const vector<Intrinsic::IITDescriptor::ArgKind> &kinds)
 {
     Tcl_SetObjResult(interp, Tcl_ObjPrintf(
 	    "%s is overloaded; %d type arguments must be specified",
-	    Tcl_GetString(objPtr), (int) kinds.size()));
+	    Tcl_GetString(objPtr), int(kinds.size())));
     if (kinds.size()) {
 	const char *sep = " (";
 	for (auto kind : kinds) {
 	    switch (kind) {
-	    case llvm::Intrinsic::IITDescriptor::AK_Any:
+	    case Intrinsic::IITDescriptor::AK_Any:
 		Tcl_AppendResult(interp, sep, "any", NULL);
 		break;
-	    case llvm::Intrinsic::IITDescriptor::AK_AnyInteger:
+	    case Intrinsic::IITDescriptor::AK_AnyInteger:
 		Tcl_AppendResult(interp, sep, "integer", NULL);
 		break;
-	    case llvm::Intrinsic::IITDescriptor::AK_AnyFloat:
+	    case Intrinsic::IITDescriptor::AK_AnyFloat:
 		Tcl_AppendResult(interp, sep, "float", NULL);
 		break;
-	    case llvm::Intrinsic::IITDescriptor::AK_AnyVector:
+	    case Intrinsic::IITDescriptor::AK_AnyVector:
 		Tcl_AppendResult(interp, sep, "vector", NULL);
 		break;
-	    case llvm::Intrinsic::IITDescriptor::AK_AnyPointer:
+	    case Intrinsic::IITDescriptor::AK_AnyPointer:
 		Tcl_AppendResult(interp, sep, "pointer", NULL);
 		break;
 	    }
@@ -132,8 +131,8 @@ LLVMGetIntrinsicDefinitionObjCmd(
         return TCL_ERROR;
     }
 
-    llvm::Module *mod;
-    llvm::Intrinsic::ID id;
+    Module *mod;
+    Intrinsic::ID id;
 
     if (GetModuleFromObj(interp, objv[1], mod) != TCL_OK)
         return TCL_ERROR;
@@ -147,17 +146,17 @@ LLVMGetIntrinsicDefinitionObjCmd(
      * parameters (if any) are required.
      */
 
-    llvm::SmallVector<llvm::Intrinsic::IITDescriptor, 8> descs;
-    llvm::Intrinsic::getIntrinsicInfoTableEntries(id, descs);
+    SmallVector<Intrinsic::IITDescriptor, 8> descs;
+    Intrinsic::getIntrinsicInfoTableEntries(id, descs);
     size_t reqs = 0;
-    std::vector<llvm::Intrinsic::IITDescriptor::ArgKind> requiredKinds;
+    vector<Intrinsic::IITDescriptor::ArgKind> requiredKinds;
     for (auto desc : descs) {
-	if (desc.Kind >= llvm::Intrinsic::IITDescriptor::Argument &&
-		desc.Kind <= llvm::Intrinsic::IITDescriptor::PtrToArgument) {
+	if (desc.Kind >= Intrinsic::IITDescriptor::Argument &&
+		desc.Kind <= Intrinsic::IITDescriptor::PtrToArgument) {
 	    size_t num = 1 + desc.getArgumentNumber();
 	    reqs = (num>reqs ? num : reqs);
 	    while (requiredKinds.size() < num)
-		requiredKinds.push_back(llvm::Intrinsic::IITDescriptor::AK_Any);
+		requiredKinds.push_back(Intrinsic::IITDescriptor::AK_Any);
 	    requiredKinds[desc.getArgumentNumber()] = desc.getArgumentKind();
 	}
     }
@@ -176,10 +175,10 @@ LLVMGetIntrinsicDefinitionObjCmd(
      * acceptable.
      */
 
-    std::vector<llvm::Type *> arg_types;
+    vector<Type *> arg_types;
     for (size_t i = 0 ; i<requiredKinds.size() ; i++) {
 	auto kind = requiredKinds[i];
-	llvm::Type *ty;
+	Type *ty;
 
 	if (GetTypeFromObj(interp, objv[i + 3], ty) != TCL_OK)
 	    return TCL_ERROR;
@@ -190,38 +189,38 @@ LLVMGetIntrinsicDefinitionObjCmd(
 	 */
 
 	switch (kind) {
-	case llvm::Intrinsic::IITDescriptor::AK_Any:
+	case Intrinsic::IITDescriptor::AK_Any:
 	    // 0 means any type is acceptable
 	    break;
-	case llvm::Intrinsic::IITDescriptor::AK_AnyInteger:
+	case Intrinsic::IITDescriptor::AK_AnyInteger:
 	    if (!ty->isIntegerTy()) {
 		Tcl_SetObjResult(interp, Tcl_ObjPrintf(
 			"argument %d to %s must be an integer type",
-			(int) i + 1, Tcl_GetString(objv[2])));
+			int(i + 1), Tcl_GetString(objv[2])));
 		return TCL_ERROR;
 	    }
 	    break;
-	case llvm::Intrinsic::IITDescriptor::AK_AnyFloat:
+	case Intrinsic::IITDescriptor::AK_AnyFloat:
 	    if (!ty->isFloatingPointTy()) {
 		Tcl_SetObjResult(interp, Tcl_ObjPrintf(
 			"type argument %d to %s must be a floating point type",
-			(int) i + 1, Tcl_GetString(objv[2])));
+			int(i + 1), Tcl_GetString(objv[2])));
 		return TCL_ERROR;
 	    }
 	    break;
-	case llvm::Intrinsic::IITDescriptor::AK_AnyVector:
+	case Intrinsic::IITDescriptor::AK_AnyVector:
 	    if (!ty->isVectorTy()) {
 		Tcl_SetObjResult(interp, Tcl_ObjPrintf(
 			"type argument %d to %s must be a vector type",
-			(int) i + 1, Tcl_GetString(objv[2])));
+			int(i + 1), Tcl_GetString(objv[2])));
 		return TCL_ERROR;
 	    }
 	    break;
-	case llvm::Intrinsic::IITDescriptor::AK_AnyPointer:
+	case Intrinsic::IITDescriptor::AK_AnyPointer:
 	    if (!ty->isPointerTy()) {
 		Tcl_SetObjResult(interp, Tcl_ObjPrintf(
 			"type argument %d to %s must be a pointer type",
-			(int) i + 1, Tcl_GetString(objv[2])));
+			int(i + 1), Tcl_GetString(objv[2])));
 		return TCL_ERROR;
 	    }
 	    break;
@@ -232,7 +231,7 @@ LLVMGetIntrinsicDefinitionObjCmd(
      * This really ought to work now. We don't assume that it *must* though.
      */
 
-    auto intrinsic = llvm::Intrinsic::getDeclaration(mod, id, arg_types);
+    auto intrinsic = Intrinsic::getDeclaration(mod, id, arg_types);
     if (intrinsic == NULL) {
 	SetStringResult(interp, "no such intrinsic");
 	return TCL_ERROR;

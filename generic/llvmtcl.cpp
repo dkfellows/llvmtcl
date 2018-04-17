@@ -21,6 +21,7 @@
 #include <llvm/IR/Intrinsics.h>
 #include <llvm/IR/DerivedTypes.h>
 #include <llvm/IR/LegacyPassManager.h>
+#include <llvm/IR/Verifier.h>
 #include <llvm/Support/CommandLine.h>
 #include <llvm/Support/DynamicLibrary.h>
 #include <llvm/ExecutionEngine/ExecutionEngine.h>
@@ -179,7 +180,7 @@ NewValueObj(
     llvm::Value *value)
 {
     auto ref = llvm::wrap(value);
-    return SetLLVMValueRefAsObj(NULL, ref);
+    return SetLLVMValueRefAsObj(nullptr, ref);
 }
 
 int
@@ -204,7 +205,7 @@ Tcl_Obj *
 NewTypeObj(
     llvm::Type *value)
 {
-    return SetLLVMTypeRefAsObj(NULL, llvm::wrap(value));
+    return SetLLVMTypeRefAsObj(nullptr, llvm::wrap(value));
 }
 
 int
@@ -570,6 +571,56 @@ LLVMGetBasicBlocksObjCmd(
 
 #include "generated/llvmtcl-gen.h"
 
+// Done this way because the C wrapper for verifyFunction sucks
+static int VerifyFunctionObjCmd(
+    ClientData clientData,
+    Tcl_Interp* interp,
+    int objc,
+    Tcl_Obj* const objv[])
+{
+    if (objc != 2 && objc != 3) {
+	Tcl_WrongNumArgs(interp, 1, objv, "Fn ?ignored?");
+	return TCL_ERROR;
+    }
+    llvm::Function *fun;
+    if (GetValueFromObj(interp, objv[1],
+	    "expected function but got another type of value", fun) != TCL_OK)
+	return TCL_ERROR;
+    std::string Messages;
+    llvm::raw_string_ostream MsgsOS(Messages);
+    if (llvm::verifyFunction(*fun, &MsgsOS)) {
+	Tcl_SetObjResult(interp, Tcl_NewStringObj(Messages.c_str(), -1));
+	return TCL_ERROR;
+    }
+    return TCL_OK;
+}
+
+// Done this way because the C wrapper for verifyModule sucks
+static int VerifyModuleObjCmd(
+    ClientData clientData,
+    Tcl_Interp* interp,
+    int objc,
+    Tcl_Obj* const objv[])
+{
+    if (objc != 2 && objc != 3) {
+	Tcl_WrongNumArgs(interp, 1, objv, "Module ?ignored?");
+	return TCL_ERROR;
+    }
+    llvm::Module *mod;
+    if (GetModuleFromObj(interp, objv[1], mod) != TCL_OK)
+	return TCL_ERROR;
+    std::string Messages;
+    llvm::raw_string_ostream MsgsOS(Messages);
+    bool DebugInfoBroken;
+    if (llvm::verifyModule(*mod, &MsgsOS, &DebugInfoBroken)) {
+	Tcl_SetObjResult(interp, Tcl_NewStringObj(Messages.c_str(), -1));
+	return TCL_ERROR;
+    }
+    // Report broken debug info as something that can be warned
+    Tcl_SetObjResult(interp, Tcl_NewBooleanObj(!DebugInfoBroken));
+    return TCL_OK;
+}
+
 static int
 LLVMCallInitialisePackageFunction(
     ClientData clientData,
@@ -577,6 +628,8 @@ LLVMCallInitialisePackageFunction(
     int objc,
     Tcl_Obj *const objv[])
 {
+    typedef int (*initFunction_t)(Tcl_Interp*);
+
     if (objc != 3) {
 	Tcl_WrongNumArgs(interp, 1, objv, "EE F");
 	return TCL_ERROR;
@@ -590,10 +643,9 @@ LLVMCallInitialisePackageFunction(
 	    "can only initialise using a function", function) != TCL_OK)
 	return TCL_ERROR;
 
-    uint64_t address = engine->getFunctionAddress(function->getName());
-
-    int (*initFunction)(Tcl_Interp*) = (int(*)(Tcl_Interp*)) address;
-    if (initFunction == NULL) {
+    auto address = engine->getFunctionAddress(function->getName());
+    auto initFunction = reinterpret_cast<initFunction_t>(address);
+    if (initFunction == nullptr) {
 	SetStringResult(interp, "no address for initialiser");
 	return TCL_ERROR;
     }
@@ -628,8 +680,8 @@ NamedStructTypeObjCmd(
 	rt = llvm::StructType::create(*llvm::unwrap(LLVMGetGlobalContext()),
 		name);
     } else {
-	llvm::ArrayRef<llvm::Type*> elements(llvm::unwrap(types),
-		(unsigned) numTypes);
+	llvm::ArrayRef<llvm::Type*> elements(
+		llvm::unwrap(types), unsigned(numTypes));
 	rt = llvm::StructType::create(elements, name, packed);
     }
 
@@ -780,9 +832,9 @@ CreateModuleFromBitcodeCmd(
     int objc,
     Tcl_Obj *const objv[])
 {
-    char *msg = NULL;
-    LLVMMemoryBufferRef buffer = NULL;
-    LLVMModuleRef module = NULL;
+    char *msg = nullptr;
+    LLVMMemoryBufferRef buffer = nullptr;
+    LLVMModuleRef module = nullptr;
     LLVMBool failed;
 
     if (objc != 2) {
@@ -798,7 +850,7 @@ CreateModuleFromBitcodeCmd(
     if (failed)
 	goto error;
 
-    Tcl_SetObjResult(interp, SetLLVMModuleRefAsObj(NULL, module));
+    Tcl_SetObjResult(interp, SetLLVMModuleRefAsObj(nullptr, module));
     return TCL_OK;
 
   error:
@@ -1021,6 +1073,8 @@ DLLEXPORT int Llvmtcl_Init(Tcl_Interp *interp)
     LLVMObjCmd("llvmtcl::TokenType", TokenTypeObjCmd);
     LLVMObjCmd("llvmtcl::ConstNone", ConstNoneObjCmd);
 #endif // API_3
+    LLVMObjCmd("llvmtcl::VerifyModule", VerifyModuleObjCmd);
+    LLVMObjCmd("llvmtcl::VerifyFunction", VerifyFunctionObjCmd);
     LLVMObjCmd("llvmtcl::CreateGenericValueOfTclInterp",
 	    CreateGenericValueOfTclInterpObjCmd);
     LLVMObjCmd("llvmtcl::CreateGenericValueOfTclObj",
