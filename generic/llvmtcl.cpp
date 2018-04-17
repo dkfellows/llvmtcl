@@ -578,7 +578,11 @@ static int VerifyFunctionObjCmd(
     int objc,
     Tcl_Obj* const objv[])
 {
-    if (objc != 2 && objc != 3) {
+    /*
+     * Parse arguments (ignored argument supports old API)
+     */
+
+    if (objc < 2 || objc > 3) {
 	Tcl_WrongNumArgs(interp, 1, objv, "Fn ?ignored?");
 	return TCL_ERROR;
     }
@@ -586,6 +590,11 @@ static int VerifyFunctionObjCmd(
     if (GetValueFromObj(interp, objv[1],
 	    "expected function but got another type of value", fun) != TCL_OK)
 	return TCL_ERROR;
+
+    /*
+     * Perform verification
+     */
+
     std::string Messages;
     llvm::raw_string_ostream MsgsOS(Messages);
     if (llvm::verifyFunction(*fun, &MsgsOS)) {
@@ -602,22 +611,42 @@ static int VerifyModuleObjCmd(
     int objc,
     Tcl_Obj* const objv[])
 {
-    if (objc != 2 && objc != 3) {
-	Tcl_WrongNumArgs(interp, 1, objv, "Module ?ignored?");
+    /*
+     * Parse arguments
+     */
+
+    if (objc < 2 || objc > 4) {
+	Tcl_WrongNumArgs(interp, 1, objv,
+		"Module ?ignored? ?debugInfoFailuresNonfatal?");
 	return TCL_ERROR;
     }
     llvm::Module *mod;
     if (GetModuleFromObj(interp, objv[1], mod) != TCL_OK)
 	return TCL_ERROR;
+    int dbnonfatal = 0;		/* Whether to report Debug Info failures as
+				 * non-fatal problems; by default, they fail
+				 * the verification entirely. */
+    if ((objc > 3)
+	    && Tcl_GetBooleanFromObj(interp, objv[3], &dbnonfatal) != TCL_OK)
+	return TCL_ERROR;
+
+    /*
+     * Perform verification
+     */
+
     std::string Messages;
     llvm::raw_string_ostream MsgsOS(Messages);
-    bool DebugInfoBroken;
-    if (llvm::verifyModule(*mod, &MsgsOS, &DebugInfoBroken)) {
+    bool DebugInfoBroken, *debugInfo = nullptr;
+    if (dbnonfatal)
+	debugInfo = &DebugInfoBroken;
+    if (llvm::verifyModule(*mod, &MsgsOS, debugInfo)) {
 	Tcl_SetObjResult(interp, Tcl_NewStringObj(Messages.c_str(), -1));
 	return TCL_ERROR;
     }
-    // Report broken debug info as something that can be warned
-    Tcl_SetObjResult(interp, Tcl_NewBooleanObj(!DebugInfoBroken));
+    if (dbnonfatal) {
+	// Report broken debug info as something that can be warned
+	Tcl_SetObjResult(interp, Tcl_NewBooleanObj(!DebugInfoBroken));
+    }
     return TCL_OK;
 }
 
