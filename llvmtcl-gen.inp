@@ -10,6 +10,8 @@ typedef LLVMExecutionEngineRef
 typedef LLVMGenericValueRef
 typedef LLVMPassManagerRef
 typedef LLVMPassManagerBuilderRef
+typedef LLVMTargetDataRef
+typedef LLVMTargetMachineRef
 
 enum {LLVMVoidTypeKind, LLVMHalfTypeKind, LLVMFloatTypeKind, LLVMDoubleTypeKind, LLVMX86_FP80TypeKind, LLVMFP128TypeKind, LLVMPPC_FP128TypeKind, LLVMLabelTypeKind, LLVMIntegerTypeKind, LLVMFunctionTypeKind, LLVMStructTypeKind, LLVMArrayTypeKind, LLVMPointerTypeKind, LLVMVectorTypeKind, LLVMMetadataTypeKind, LLVMX86_MMXTypeKind, LLVMTokenTypeKind} LLVMTypeKind;
 //enum {LLVMZExtAttribute, LLVMSExtAttribute, LLVMNoReturnAttribute, LLVMInRegAttribute, LLVMStructRetAttribute, LLVMNoUnwindAttribute, LLVMNoAliasAttribute, LLVMByValAttribute, LLVMNestAttribute, LLVMReadNoneAttribute, LLVMReadOnlyAttribute, LLVMNoInlineAttribute, LLVMAlwaysInlineAttribute, LLVMOptimizeForSizeAttribute, LLVMStackProtectAttribute, LLVMStackProtectReqAttribute, LLVMAlignment, LLVMNoCaptureAttribute, LLVMNoRedZoneAttribute, LLVMNoImplicitFloatAttribute, LLVMNakedAttribute, LLVMInlineHintAttribute, LLVMStackAlignment, LLVMReturnsTwice, LLVMUWTable, LLVMNonLazyBind} LLVMAttribute;
@@ -482,3 +484,14 @@ std::string LLVMPrintTypeToString(LLVMTypeRef M);
 
 rename LLVMPrintValueToString LLVMPrintValueToStringTcl
 std::string LLVMPrintValueToString(LLVMValueRef M);
+
+LLVMTargetDataRef LLVMGetExecutionEngineTargetData(LLVMExecutionEngineRef);
+
+unsigned long long LLVMABISizeOfType(LLVMTargetDataRef, LLVMTypeRef);
+unsigned LLVMABIAlignmentOfType(LLVMTargetDataRef, LLVMTypeRef);
+
+LLVMTargetMachineRef LLVMGetExecutionEngineTargetMachine(LLVMExecutionEngineRef);
+std::string LLVMGetTargetMachineTriple(LLVMTargetMachineRef);
+LLVMTargetDataRef LLVMCreateTargetDataLayout(LLVMTargetMachineRef);
+void LLVMAddAnalysisPasses(LLVMTargetMachineRef, LLVMPassManagerRef);
+std::string LLVMCopyStringRepOfTargetData(LLVMTargetDataRef);
