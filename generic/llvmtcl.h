@@ -26,7 +26,7 @@ MODULE_SCOPE int	GetTypeFromObj(Tcl_Interp *interp, Tcl_Obj *obj,
 			    llvm::Type *&type);
 MODULE_SCOPE int	GetValueFromObj(Tcl_Interp *interp, Tcl_Obj *obj,
 			    llvm::Value *&module);
-MODULE_SCOPE Tcl_Obj *	NewValueObj(llvm::Value *value);
+MODULE_SCOPE Tcl_Obj *	NewObj(llvm::Value *value);
 
 extern "C" double	__powidf2(double a, int b);
 
@@ -88,6 +88,28 @@ SetStringResult(
     const char *msg)
 {
     Tcl_SetObjResult(interp, Tcl_NewStringObj(msg, -1));
+}
+
+namespace tcl {
+    typedef Tcl_Obj *value;
+}
+
+static inline tcl::value
+NewObj(const std::string &str)
+{
+    return Tcl_NewStringObj(str.c_str(), str.length());
+}
+
+static inline tcl::value
+NewObj(bool boolean)
+{
+    return Tcl_NewBooleanObj(boolean);
+}
+
+static inline tcl::value
+NewObj(const std::vector<tcl::value> &vec)
+{
+    return Tcl_NewListObj(vec.size(), vec.data());
 }
 
 template<typename T>//T subclass of llvm::Type

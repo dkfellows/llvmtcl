@@ -72,9 +72,8 @@ ParseCommandLineOptionsObjCmd(
     Tcl_Obj *const objv[])
 {
     std::vector<const char*> argv(objc);
-    for (int i = 0; i < objc; ++i) {
+    for (int i = 0; i < objc; ++i)
 	argv[i] = Tcl_GetString(objv[i]);
-    }
 
     std::string s;
     llvm::raw_string_ostream os(s);
@@ -185,8 +184,15 @@ GetBuilderFromObj(
     return TCL_OK;
 }
 
+static inline Tcl_Obj *
+NewObj(
+    LLVMValueRef value)
+{
+    return SetLLVMValueRefAsObj(nullptr, value);
+}
+
 Tcl_Obj *
-NewValueObj(
+NewObj(
     llvm::Value *value)
 {
     auto ref = llvm::wrap(value);
@@ -211,11 +217,24 @@ GetValueFromObj(
     return GetValueFromObj(interp, obj, "expected value but got value", value);
 }
 
-Tcl_Obj *
-NewTypeObj(
+static inline Tcl_Obj *
+NewObj(
     llvm::Type *value)
 {
     return SetLLVMTypeRefAsObj(nullptr, llvm::wrap(value));
+}
+
+static inline Tcl_Obj *
+NewObj(
+    llvm::BasicBlock *value)
+{
+    return SetLLVMBasicBlockRefAsObj(nullptr, llvm::wrap(value));
+}
+
+static inline Tcl_Obj *
+NewObj(LLVMModuleRef module)
+{
+    return SetLLVMModuleRefAsObj(nullptr, module);
 }
 
 int
@@ -416,7 +435,7 @@ LLVMBuildAggregateRetObjCmd(
     LLVMValueRef rt = LLVMBuildAggregateRet(builder, returnValues.data(),
 	    rvobjc);
 
-    Tcl_SetObjResult(interp, SetLLVMValueRefAsObj(interp, rt));
+    Tcl_SetObjResult(interp, NewObj(rt));
     return TCL_OK;
 }
 
@@ -464,7 +483,7 @@ LLVMBuildInvokeObjCmd(
     LLVMValueRef rt = LLVMBuildInvoke(builder, fn, args.data(), aobjc,
 	    thenBlock, catchBlock, name.c_str());
 
-    Tcl_SetObjResult(interp, SetLLVMValueRefAsObj(interp, rt));
+    Tcl_SetObjResult(interp, NewObj(rt));
     return TCL_OK;
 }
 
@@ -487,9 +506,8 @@ LLVMGetParamTypesObjCmd(
         return TCL_ERROR;
 
     Tcl_Obj *rtl = Tcl_NewListObj(0, NULL);
-    for(auto type : functionType->params())
-	Tcl_ListObjAppendElement(NULL, rtl,
-		SetLLVMTypeRefAsObj(interp, llvm::wrap(type)));
+    for (auto type : functionType->params())
+	Tcl_ListObjAppendElement(NULL, rtl, NewObj(type));
 
     Tcl_SetObjResult(interp, rtl);
     return TCL_OK;
@@ -512,17 +530,15 @@ LLVMGetParamsObjCmd(
 	    "can only get parameters of a function", function) != TCL_OK)
         return TCL_ERROR;
 
-    Tcl_Obj *rtl = Tcl_NewListObj(0, NULL);
 #ifdef API_5
-    for (auto &value : function->args())
-	Tcl_ListObjAppendElement(NULL, rtl,
-		SetLLVMValueRefAsObj(interp, llvm::wrap(&value)));
+    const auto &args = function->args();
 #else // !API_5
-    for (auto &value : function->getArgumentList())
-	Tcl_ListObjAppendElement(NULL, rtl,
-		SetLLVMValueRefAsObj(interp, llvm::wrap(&value)));
+    const auto &args = function->getArgumentList();
 #endif // API_5
 
+    Tcl_Obj *rtl = Tcl_NewListObj(0, NULL);
+    for (auto &value : args)
+	Tcl_ListObjAppendElement(NULL, rtl, NewObj(&value));
     Tcl_SetObjResult(interp, rtl);
     return TCL_OK;
 }
@@ -545,10 +561,8 @@ LLVMGetStructElementTypesObjCmd(
         return TCL_ERROR;
 
     Tcl_Obj *rtl = Tcl_NewListObj(0, NULL);
-    for(auto &type : structType->elements())
-	Tcl_ListObjAppendElement(interp, rtl,
-		SetLLVMTypeRefAsObj(interp, llvm::wrap(type)));
-
+    for (auto &type : structType->elements())
+	Tcl_ListObjAppendElement(interp, rtl, NewObj(type));
     Tcl_SetObjResult(interp, rtl);
     return TCL_OK;
 }
@@ -571,9 +585,8 @@ LLVMGetBasicBlocksObjCmd(
         return TCL_ERROR;
 
     Tcl_Obj *rtl = Tcl_NewListObj(0, NULL);
-    for (auto I = function->begin(), E = function->end(); I != E; I++)
-	Tcl_ListObjAppendElement(interp, rtl,
-		SetLLVMBasicBlockRefAsObj(interp, llvm::wrap(&*I)));
+    for (auto &BB : *function)
+	Tcl_ListObjAppendElement(interp, rtl, NewObj(&BB));
 
     Tcl_SetObjResult(interp, rtl);
     return TCL_OK;
@@ -612,6 +625,12 @@ static int VerifyFunctionObjCmd(
 	SetStringResult(interp, Messages);
 	return TCL_ERROR;
     }
+
+    /*
+     * Make result; weird API for backward compatibility reasons.
+     */
+
+    Tcl_SetObjResult(interp, NewObj(true));
     return TCL_OK;
 }
 
@@ -647,18 +666,18 @@ static int VerifyModuleObjCmd(
 
     std::string Messages;
     llvm::raw_string_ostream MsgsOS(Messages);
-    bool DebugInfoBroken, *debugInfo = nullptr;
+    bool DebugInfoBroken = false, *debugInfo = nullptr;
     if (dbnonfatal)
 	debugInfo = &DebugInfoBroken;
-    if (llvm::verifyModule(*mod, &MsgsOS, debugInfo)) {
-	TrimRight(Messages);
-	SetStringResult(interp, Messages);
-	return TCL_ERROR;
-    }
-    if (dbnonfatal) {
-	// Report broken debug info as something that can be warned
-	Tcl_SetObjResult(interp, Tcl_NewBooleanObj(!DebugInfoBroken));
-    }
+    bool failedVerification = llvm::verifyModule(*mod, &MsgsOS, debugInfo);
+
+    /*
+     * Convert result; weird API for backward compatibility reasons.
+     */
+
+    TrimRight(Messages);
+    std::vector<tcl::value> result { NewObj(failedVerification), NewObj(Messages) };
+    Tcl_SetObjResult(interp, NewObj(result));
     return TCL_OK;
 }
 
@@ -726,7 +745,7 @@ NamedStructTypeObjCmd(
 	rt = llvm::StructType::create(elements, name, packed);
     }
 
-    Tcl_SetObjResult(interp, SetLLVMTypeRefAsObj(interp, llvm::wrap(rt)));
+    Tcl_SetObjResult(interp, NewObj(rt));
     return TCL_OK;
 }
 
@@ -861,7 +880,7 @@ CopyModuleFromModuleCmd(
 	return TCL_ERROR;
 #endif // API_4
     }
-    Tcl_SetObjResult(interp, SetLLVMModuleRefAsObj(interp, tgtmod));
+    Tcl_SetObjResult(interp, NewObj(tgtmod));
     return TCL_OK;
 }
 
@@ -890,7 +909,7 @@ CreateModuleFromBitcodeCmd(
     if (failed)
 	goto error;
 
-    Tcl_SetObjResult(interp, SetLLVMModuleRefAsObj(nullptr, module));
+    Tcl_SetObjResult(interp, NewObj(module));
     return TCL_OK;
 
   error:
@@ -931,20 +950,14 @@ GarbageCollectUnusedFunctionsInModuleCmd(
 	 * concurrent modification trickiness.
 	 */
 
-	for (auto curFref = module->functions().begin(), 
-		endFref = module->functions().end(); 
-		curFref != endFref; ++curFref) {
-	    auto &fn = *curFref;
-
+	for (auto &fn : module->functions())
 	    if (fn.user_empty() &&
 		    (fn.getVisibility() == llvm::GlobalValue::HiddenVisibility
-		    || fn.isDeclaration())) {
+		    || fn.isDeclaration()))
 		to_delete.push_back(&fn);
-	    }
-	}
 
-	for (auto f = to_delete.begin() ; f != to_delete.end() ; ++f) {
-	    (*f)->eraseFromParent();
+	for (auto f : to_delete) {
+	    f->eraseFromParent();
 	    didDeletion = true;
 	}
 
@@ -1030,7 +1043,7 @@ TokenTypeObjCmd(
 
     auto tokenType = llvm::Type::getTokenTy(
 	    *llvm::unwrap(LLVMGetGlobalContext()));
-    Tcl_SetObjResult(interp, NewTypeObj(tokenType));
+    Tcl_SetObjResult(interp, NewObj(tokenType));
     return TCL_OK;
 }
 
@@ -1048,7 +1061,7 @@ ConstNoneObjCmd(
 
     auto noneConstant = llvm::ConstantTokenNone::get(
 	    *llvm::unwrap(LLVMGetGlobalContext()));
-    Tcl_SetObjResult(interp, NewValueObj(noneConstant));
+    Tcl_SetObjResult(interp, NewObj(noneConstant));
     return TCL_OK;
 }
 #endif // API_3

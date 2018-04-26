@@ -120,8 +120,7 @@ DescribeAttributes(
 		slot,
 #endif // !API_5
 		map->kind))
-	    Tcl_ListObjAppendElement(NULL, list,
-		    Tcl_NewStringObj(map->name, -1));
+	    Tcl_ListObjAppendElement(NULL, list, NewObj(map->name));
     return list;
 }
 

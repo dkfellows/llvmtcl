@@ -116,7 +116,7 @@ GetDIBuilderFromObj(
  */
 
 static Tcl_Obj *
-NewDIBuilderObj(
+NewObj(
     DIBuilder *ref)
 {
     if (Builder_refmap.find(ref) == Builder_refmap.end()) {
@@ -187,7 +187,7 @@ CreateDebugBuilder(
     if (Triple(sys::getProcessTriple()).isOSDarwin())
 	module->addModuleFlag(Module::Warning, "Dwarf Version", 2);
 
-    Tcl_SetObjResult(interp, NewDIBuilderObj(new DIBuilder(*module)));
+    Tcl_SetObjResult(interp, NewObj(new DIBuilder(*module)));
     return TCL_OK;
 }
 
@@ -904,7 +904,7 @@ BuildDbgValue(
 #endif // !API_6
 	    varInfo, expr, location, b->GetInsertBlock());
 
-    Tcl_SetObjResult(interp, NewValueObj(inst));
+    Tcl_SetObjResult(interp, NewObj(inst));
     return TCL_OK;
 }
 

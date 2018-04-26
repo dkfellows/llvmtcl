@@ -67,7 +67,7 @@ GetLLVMIntrinsicIDFromObj(
 }
 
 static inline Tcl_Obj *
-SetLLVMIntrinsicIDAsObj(
+NewIntrinsicIDObj(
     unsigned id)
 {
     if (id <= 0 || id > sizeof(intrinsicNames) / sizeof(const char *)) {
@@ -260,7 +260,7 @@ LLVMGetIntrinsicIDObjCmd(
     unsigned id = LLVMGetIntrinsicID(intrinsic);
 
     if (id != 0)
-	Tcl_SetObjResult(interp, SetLLVMIntrinsicIDAsObj(id));
+	Tcl_SetObjResult(interp, NewIntrinsicIDObj(id));
     return TCL_OK;
 }
 
