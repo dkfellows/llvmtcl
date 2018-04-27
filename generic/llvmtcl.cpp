@@ -867,21 +867,23 @@ GarbageCollectUnusedFunctionsInModuleCmd(
 }
 
 static int
-MakeTargetMachineCmd(ClientData clientData,
-		     Tcl_Interp* interp,
-		     int objc,
-		     Tcl_Obj *const objv[])
+MakeTargetMachineCmd(
+    ClientData clientData,
+    Tcl_Interp *interp,
+    int objc,
+    Tcl_Obj *const objv[])
 {
     if (objc < 1 || objc > 2) {
 	Tcl_WrongNumArgs(interp, 1, objv, "?Target?");
+	return TCL_ERROR;
     }
-    const char *triple = NULL;
+    const char *triple = nullptr;
     if (objc > 1) {
 	triple = Tcl_GetString(objv[1]);
     }
-    if (!triple || triple[0] == '\0') {
+    if (!triple || triple[0] == '\0')
 	triple = LLVMTCL_TARGET;
-    }
+
     LLVMTargetRef target;
     char *err;
     if (LLVMGetTargetFromTriple(triple, &target, &err)) {
@@ -889,13 +891,15 @@ MakeTargetMachineCmd(ClientData clientData,
 	LLVMDisposeMessage(err);
 	return TCL_ERROR;
     }
+
     auto level = LLVMCodeGenLevelAggressive;
     const char *cpu = llvm::sys::getHostCPUName().data();
     const char *features = "";
-    auto targetMachine = LLVMCreateTargetMachine(target, triple, cpu, features,
-	    level, LLVMRelocPIC, LLVMCodeModelDefault);
-    Tcl_SetObjResult(interp, SetLLVMTargetMachineRefAsObj(interp,
-							  targetMachine));
+    auto targetMachine = LLVMCreateTargetMachine(
+	    target, triple, cpu, features, level, LLVMRelocPIC,
+	    LLVMCodeModelDefault);
+    Tcl_SetObjResult(interp, SetLLVMTargetMachineRefAsObj(
+	    nullptr, targetMachine));
     return TCL_OK;
 }
 
@@ -945,8 +949,9 @@ WriteModuleMachineCodeToFileCmd(
     auto level = LLVMCodeGenLevelAggressive;
     const char *cpu = llvm::sys::getHostCPUName().data();
     const char *features = "";
-    auto targetMachine = LLVMCreateTargetMachine(target, triple.c_str(), cpu, features,
-	    level, LLVMRelocPIC, LLVMCodeModelDefault);
+    auto targetMachine = LLVMCreateTargetMachine(
+	    target, triple.c_str(), cpu, features, level, LLVMRelocPIC,
+	    LLVMCodeModelDefault);
     if (LLVMTargetMachineEmitToFile(targetMachine, llvm::wrap(module),
 	    file, dumpType, &err)) {
 	Tcl_SetResult(interp, err, TCL_VOLATILE);
