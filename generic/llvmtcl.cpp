@@ -986,17 +986,16 @@ MakeTargetMachineCmd(
 	Tcl_WrongNumArgs(interp, 1, objv, "?Target?");
 	return TCL_ERROR;
     }
-    const char *triple = nullptr;
-    if (objc > 1) {
+    const char *triple = LLVMTCL_TARGET;
+    if (objc > 1)
 	triple = Tcl_GetString(objv[1]);
-    }
-    if (!triple || triple[0] == '\0')
+    if (triple[0] == '\0')
 	triple = LLVMTCL_TARGET;
 
     LLVMTargetRef target;
     char *err;
     if (LLVMGetTargetFromTriple(triple, &target, &err)) {
-	Tcl_SetResult(interp, err, TCL_VOLATILE);
+	SetStringResult(interp, err);
 	LLVMDisposeMessage(err);
 	return TCL_ERROR;
     }
@@ -1023,7 +1022,7 @@ WriteModuleMachineCodeToFileCmd(
 
     if (objc < 3 || objc > 4) {
 	Tcl_WrongNumArgs(interp, 1, objv,
-			 "Module ObjectFile ?assembly|object?");
+		"Module ObjectFile ?assembly|object?");
 	return TCL_ERROR;
     }
     if (GetModuleFromObj(interp, objv[1], module) != TCL_OK)
@@ -1047,7 +1046,6 @@ WriteModuleMachineCodeToFileCmd(
     }
 
     std::string triple = module->getTargetTriple();
-    std::cerr << "Target triple:" << triple << std::endl;
     LLVMTargetRef target;
     char *err;
     if (LLVMGetTargetFromTriple(triple.c_str(), &target, &err)) {
