@@ -59,9 +59,11 @@ static inline void
 TrimRight(
     std::string &msg)
 {
-    while (msg.length() > 0
-	    && (msg[msg.length() - 1] == 'n' || msg[msg.length() - 1] == '\r'))
-	msg.pop_back();
+    while (msg.length() > 0) {
+	if (msg[msg.length() - 1] != '\n' && msg[msg.length() - 1] != '\r')
+	    break;
+	msg.replace(msg.length() - 1, 1, "");
+    }
 }
 
 static int
@@ -79,6 +81,7 @@ ParseCommandLineOptionsObjCmd(
     llvm::raw_string_ostream os(s);
     bool result = llvm::cl::ParseCommandLineOptions(
 	    objc, argv.data(), "called from Tcl", &os);
+    os.flush();
     if (!result) {
 	TrimRight(s);
 	SetStringResult(interp, s);
@@ -621,6 +624,7 @@ static int VerifyFunctionObjCmd(
     std::string Messages;
     llvm::raw_string_ostream MsgsOS(Messages);
     if (llvm::verifyFunction(*fun, &MsgsOS)) {
+	MsgsOS.flush();
 	TrimRight(Messages);
 	SetStringResult(interp, Messages);
 	return TCL_ERROR;
@@ -670,6 +674,7 @@ static int VerifyModuleObjCmd(
     if (dbnonfatal)
 	debugInfo = &DebugInfoBroken;
     bool failedVerification = llvm::verifyModule(*mod, &MsgsOS, debugInfo);
+    MsgsOS.flush();
 
     /*
      * Convert result; weird API for backward compatibility reasons.
