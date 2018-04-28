@@ -37,7 +37,7 @@ AC_CONFIG_AUX_DIR(tclconfig)
 #--------------------------------------------------------------------
 
 AC_ARG_WITH(llvm-config,
-    AC_HELP_STRING([--with-llvm-config=FILE],
+    AS_HELP_STRING([--with-llvm-config=FILE],
 	[exact name of LLVM configuration description program; will be
 	    searched for on the PATH if not already fully qualified
 	    (llvm-config)]),

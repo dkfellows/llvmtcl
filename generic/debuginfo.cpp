@@ -8,7 +8,7 @@
 #ifdef API_4
 #define NO_FLAGS DINode::FlagZero
 #else
-#define NO_FLAGS ((unsigned) 0)
+#define NO_FLAGS (unsigned(0))
 #endif // API_4
 
 using namespace llvm;
@@ -116,7 +116,7 @@ GetDIBuilderFromObj(
  */
 
 static Tcl_Obj *
-NewDIBuilderObj(
+NewObj(
     DIBuilder *ref)
 {
     if (Builder_refmap.find(ref) == Builder_refmap.end()) {
@@ -187,7 +187,7 @@ CreateDebugBuilder(
     if (Triple(sys::getProcessTriple()).isOSDarwin())
 	module->addModuleFlag(Module::Warning, "Dwarf Version", 2);
 
-    Tcl_SetObjResult(interp, NewDIBuilderObj(new DIBuilder(*module)));
+    Tcl_SetObjResult(interp, NewObj(new DIBuilder(*module)));
     return TCL_OK;
 }
 
@@ -328,7 +328,7 @@ DefineLocation(
 	return TCL_ERROR;
 
     auto val = DILocation::get(scope->getContext(),
-	    (unsigned) line, (unsigned) column, scope, inlinedAt);
+	    unsigned(line), unsigned(column), scope, inlinedAt);
 
     Tcl_SetObjResult(interp, NewMetadataObj(val, "Location"));
     return TCL_OK;
@@ -456,11 +456,11 @@ DefineBasicType(
     if (Tcl_GetIntFromObj(interp, objv[4], &dwarfTypeCode) != TCL_OK)
 	return TCL_ERROR;
 
-    auto val = builder->createBasicType(name, (uint64_t) size,
+    auto val = builder->createBasicType(name, uint64_t(size),
 #ifndef API_4
-					(uint64_t) align,
+					uint64_t(align),
 #endif // !API_4
-					(unsigned) dwarfTypeCode);
+					unsigned(dwarfTypeCode));
     Tcl_SetObjResult(interp, NewMetadataObj(val, "BasicType"));
     return TCL_OK;
 }
@@ -548,8 +548,8 @@ DefineStructType(
 	elements.push_back(type);
     }
 
-    auto val = builder->createStructType(scope, name, file, (unsigned) line,
-	    (uint64_t) size, align, NO_FLAGS, nullptr,
+    auto val = builder->createStructType(scope, name, file, unsigned(line),
+	    uint64_t(size), align, NO_FLAGS, nullptr,
 	    builder->getOrCreateArray(elements));
 
     Tcl_SetObjResult(interp, NewMetadataObj(val, "StructType"));
@@ -728,8 +728,7 @@ DefineParameter(
     if (Tcl_GetIntFromObj(interp, objv[4], &argIndex) != TCL_OK)
 	return TCL_ERROR;
     if (argIndex < 1) {
-	Tcl_SetObjResult(interp, Tcl_NewStringObj(
-		"argument indices must be at least 1", -1));
+	SetStringResult(interp, "argument indices must be at least 1");
 	return TCL_ERROR;
     }
     DIFile *file;
@@ -743,12 +742,12 @@ DefineParameter(
 
 #ifdef API_3
     auto val = builder->createParameterVariable(scope, name,
-	    (unsigned) argIndex, file, (unsigned) line, type, true);
+	    unsigned(argIndex), file, unsigned(line), type, true);
 #else
     // This API was deprecated (and made private) after 3.7
     auto val = builder->createLocalVariable(
 	    llvm::dwarf::DW_TAG_arg_variable, scope, name, file,
-	    (unsigned) line, type, true, 0, (unsigned) argIndex);
+	    unsigned(line), type, true, 0, unsigned(argIndex));
 #endif // API_3
 
     Tcl_SetObjResult(interp, NewMetadataObj(val, "Variable"));
@@ -797,12 +796,12 @@ DefineLocal(
 
 #ifdef API_3
     auto val = builder->createAutoVariable(scope, name,
-	    file, (unsigned) line, type, true);
+	    file, unsigned(line), type, true);
 #else
     // This API was deprecated (and made private) after 3.7
     auto val = builder->createLocalVariable(
 	    dwarf::DW_TAG_auto_variable, scope, name, file,
-	    (unsigned) line, type, true);
+	    unsigned(line), type, true);
 #endif // API_3
 
     Tcl_SetObjResult(interp, NewMetadataObj(val, "Variable"));
@@ -877,7 +876,7 @@ BuildDbgValue(
 {
     if (objc != 6) {
 	Tcl_WrongNumArgs(interp, 1, objv,
-		"dibuilder builder value location variableInfo");
+		"DIBuilder builder value location variableInfo");
 	return TCL_ERROR;
     }
 
@@ -905,7 +904,7 @@ BuildDbgValue(
 #endif // !API_6
 	    varInfo, expr, location, b->GetInsertBlock());
 
-    Tcl_SetObjResult(interp, NewValueObj(inst));
+    Tcl_SetObjResult(interp, NewObj(inst));
     return TCL_OK;
 }
 
