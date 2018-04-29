@@ -150,10 +150,10 @@ proc gen_api_call {cf of l} {
 	    lappend out_args arg$n $fargtype
 	    switch -exact -- $fargtype {
 		"LLVMExecutionEngineRef *" {
-		    puts $cf "    [string trim $fargtype { *}] arg$n = 0; // output argument"
+		    puts $cf "    [string trim $fargtype { *}] arg$n = nullptr; // output argument"
 		}
 		"char **" {
-		    puts $cf "    char* arg$n = 0;"
+		    puts $cf "    char* arg$n = nullptr;"
 		}
 		default {
 		    error "Unknown type '$fargtype' in '$l'"
@@ -178,7 +178,7 @@ proc gen_api_call {cf of l} {
 		"LLVMTargetDataRef" -
 		"LLVMTargetMachineRef" -
 		"LLVMModuleRef" {
-		    puts $cf "    $fargtype arg$n = 0;"
+		    puts $cf "    $fargtype arg$n = nullptr;"
 		    puts $cf "    if (Get${fargtype}FromObj(interp, objv\[$on\], arg$n) != TCL_OK)"
 		    puts $cf "        return TCL_ERROR;"
 		}
@@ -200,16 +200,16 @@ proc gen_api_call {cf of l} {
 		"LLVMGenericValueRef *" -
 		"LLVMValueRef *" -
 		"LLVMTypeRef *" {
-		    if {[lindex $fargsl [expr {$n*2}]] ne "unsigned"} {
+		    if {[lindex $fargsl $n] ne "unsigned"} {
 			error "Unknown type '$fargtype' in '$l'"
 		    }
 		    puts $cf "    int iarg[expr {$n+1}] = 0;"
-		    puts $cf "    $fargtype arg$n = 0;"
+		    puts $cf "    $fargtype arg$n = nullptr;"
 		    puts $cf "    if (GetListOf[string trim $fargtype { *}]FromObj(interp, objv\[$on\], arg$n, iarg[expr {$n+1}]) != TCL_OK)"
 		    puts $cf "        return TCL_ERROR;"
 		    puts $cf "    unsigned arg[expr {$n+1}] = (unsigned)iarg[expr {$n+1}];"
 		    set skip_next 1
-		    lappend delete_args $n
+		    lappend delete_args arg$n
 		}
 		"std::string" -
 		"const char *" {
@@ -293,6 +293,9 @@ proc gen_api_call {cf of l} {
 	    set rv [val_as_obj $rt rt]
 	    puts $cf "    Tcl_SetObjResult(interp, $rv);"
 	}
+    }
+    foreach da $delete_args {
+	puts $cf "    delete [] $da;"
     }
     puts $cf "    return TCL_OK;"
     puts $cf "\}"
