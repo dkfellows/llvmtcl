@@ -7,17 +7,17 @@
  * it.
  */
 
+#if LLVM_VERSION_MAJOR <= 3
+#error This version of LLVM is no longer supported; upgrade to 4.0 or later
+#endif // LLVM_VERSION_MAJOR > 3
+
 #if LLVM_VERSION_MAJOR > 5
 #define API_6 1
 #endif // LLVM_VERSION_MAJOR > 4
+
 #if LLVM_VERSION_MAJOR > 4
 #define API_5 1
 #endif // LLVM_VERSION_MAJOR > 4
-#if LLVM_VERSION_MAJOR > 3
-#define API_4 1
-#else
-#error This version of LLVM is no longer supported; upgrade to 4.0 or later
-#endif // LLVM_VERSION_MAJOR > 3
 
 #endif // LLVMTCL_VERSION_H
 
