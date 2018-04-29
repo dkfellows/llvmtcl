@@ -984,6 +984,42 @@ GarbageCollectUnusedFunctionsInModuleCmd(
 }
 
 static int
+MakeTargetMachineCmd(
+    ClientData clientData,
+    Tcl_Interp *interp,
+    int objc,
+    Tcl_Obj *const objv[])
+{
+    if (objc < 1 || objc > 2) {
+	Tcl_WrongNumArgs(interp, 1, objv, "?Target?");
+	return TCL_ERROR;
+    }
+    const char *triple = LLVMTCL_TARGET;
+    if (objc > 1)
+	triple = Tcl_GetString(objv[1]);
+    if (triple[0] == '\0')
+	triple = LLVMTCL_TARGET;
+
+    LLVMTargetRef target;
+    char *err;
+    if (LLVMGetTargetFromTriple(triple, &target, &err)) {
+	SetStringResult(interp, err);
+	LLVMDisposeMessage(err);
+	return TCL_ERROR;
+    }
+
+    auto level = LLVMCodeGenLevelAggressive;
+    const char *cpu = llvm::sys::getHostCPUName().data();
+    const char *features = "";
+    auto targetMachine = LLVMCreateTargetMachine(
+	    target, triple, cpu, features, level, LLVMRelocPIC,
+	    LLVMCodeModelDefault);
+    Tcl_SetObjResult(interp, SetLLVMTargetMachineRefAsObj(
+	    nullptr, targetMachine));
+    return TCL_OK;
+}
+
+static int
 WriteModuleMachineCodeToFileCmd(
     ClientData clientData,
     Tcl_Interp *interp,
@@ -992,8 +1028,9 @@ WriteModuleMachineCodeToFileCmd(
 {
     llvm::Module *module;
 
-    if (objc < 3 && objc > 5) {
-	Tcl_WrongNumArgs(interp, 1, objv, "Module ObjectFile ?Target?");
+    if (objc < 3 || objc > 4) {
+	Tcl_WrongNumArgs(interp, 1, objv,
+		"Module ObjectFile ?assembly|object?");
 	return TCL_ERROR;
     }
     if (GetModuleFromObj(interp, objv[1], module) != TCL_OK)
@@ -1002,12 +1039,12 @@ WriteModuleMachineCodeToFileCmd(
     auto file = Tcl_GetString(objv[2]);
     auto dumpType = LLVMObjectFile;
 
-    if (objc > 4) {
+    if (objc > 3) {
 	static const char *types[] = {
 	    "assembly", "object", NULL
 	};
 	int idx;
-	if (Tcl_GetIndexFromObj(interp, objv[4], types, "code type", 0,
+	if (Tcl_GetIndexFromObj(interp, objv[3], types, "code type", 0,
 		&idx) != TCL_OK)
 	    return TCL_ERROR;
 	switch (idx) {
@@ -1016,11 +1053,10 @@ WriteModuleMachineCodeToFileCmd(
 	}
     }
 
-    const char *triple = (objc>3 && Tcl_GetString(objv[3])[0]
-			  ? Tcl_GetString(objv[3]) : LLVMTCL_TARGET);
+    std::string triple = module->getTargetTriple();
     LLVMTargetRef target;
     char *err;
-    if (LLVMGetTargetFromTriple(triple, &target, &err)) {
+    if (LLVMGetTargetFromTriple(triple.c_str(), &target, &err)) {
 	SetStringResult(interp, err);
 	LLVMDisposeMessage(err);
 	return TCL_ERROR;
@@ -1028,8 +1064,9 @@ WriteModuleMachineCodeToFileCmd(
     auto level = LLVMCodeGenLevelAggressive;
     const char *cpu = llvm::sys::getHostCPUName().data();
     const char *features = "";
-    auto targetMachine = LLVMCreateTargetMachine(target, triple, cpu, features,
-	    level, LLVMRelocPIC, LLVMCodeModelDefault);
+    auto targetMachine = LLVMCreateTargetMachine(
+	    target, triple.c_str(), cpu, features, level, LLVMRelocPIC,
+	    LLVMCodeModelDefault);
     if (LLVMTargetMachineEmitToFile(targetMachine, llvm::wrap(module),
 	    file, dumpType, &err)) {
 	SetStringResult(interp, err);
@@ -1164,6 +1201,7 @@ DLLEXPORT int Llvmtcl_Init(Tcl_Interp *interp)
 	    CreateModuleFromBitcodeCmd);
     LLVMObjCmd("llvmtcl::GarbageCollectUnusedFunctionsInModule",
 	    GarbageCollectUnusedFunctionsInModuleCmd);
+    LLVMObjCmd("llvmtcl::MakeTargetMachine", MakeTargetMachineCmd);
     LLVMObjCmd("llvmtcl::WriteModuleMachineCodeToFile",
 	    WriteModuleMachineCodeToFileCmd);
     // Debugging info support
