@@ -5,12 +5,6 @@
 #include "llvmtcl.h"
 #include "version.h"
 
-#ifdef API_4
-#define NO_FLAGS DINode::FlagZero
-#else
-#define NO_FLAGS ((unsigned) 0)
-#endif // API_4
-
 using namespace llvm;
 
 static std::map<std::string, MDNode*> Metadata_map;
@@ -116,7 +110,7 @@ GetDIBuilderFromObj(
  */
 
 static Tcl_Obj *
-NewDIBuilderObj(
+NewObj(
     DIBuilder *ref)
 {
     if (Builder_refmap.find(ref) == Builder_refmap.end()) {
@@ -187,7 +181,7 @@ CreateDebugBuilder(
     if (Triple(sys::getProcessTriple()).isOSDarwin())
 	module->addModuleFlag(Module::Warning, "Dwarf Version", 2);
 
-    Tcl_SetObjResult(interp, NewDIBuilderObj(new DIBuilder(*module)));
+    Tcl_SetObjResult(interp, NewObj(new DIBuilder(*module)));
     return TCL_OK;
 }
 
@@ -247,11 +241,7 @@ DefineCompileUnit(
     unsigned runtimeVersion = 0;
 
     auto val = builder->createCompileUnit(lang,
-#ifdef API_4
 	    builder->createFile(file, dir),
-#else // !API_4
-	    file, dir,
-#endif //API_4
 	    producer, true, flags, runtimeVersion);
 
     Tcl_SetObjResult(interp, NewMetadataObj(val, "CompileUnit"));
@@ -328,7 +318,7 @@ DefineLocation(
 	return TCL_ERROR;
 
     auto val = DILocation::get(scope->getContext(),
-	    (unsigned) line, (unsigned) column, scope, inlinedAt);
+	    unsigned(line), unsigned(column), scope, inlinedAt);
 
     Tcl_SetObjResult(interp, NewMetadataObj(val, "Location"));
     return TCL_OK;
@@ -373,11 +363,7 @@ DefineNamespace(
 #ifdef API_5
     auto val = builder->createNameSpace(scope, name, false);
 #else // !API_5
-    auto val = builder->createNameSpace(scope, name, file, line
-#ifdef API_4
-	    , false
-#endif // API_4
-	    );
+    auto val = builder->createNameSpace(scope, name, file, line, false);
 #endif // API_5
 
     Tcl_SetObjResult(interp, NewMetadataObj(val, "Namespace"));
@@ -447,20 +433,14 @@ DefineBasicType(
 	return TCL_ERROR;
     std::string name = Tcl_GetString(objv[2]);
 
-#ifndef API_4
-    int align = 0;
-#endif
     int size, dwarfTypeCode;
     if (Tcl_GetIntFromObj(interp, objv[3], &size) != TCL_OK)
 	return TCL_ERROR;
     if (Tcl_GetIntFromObj(interp, objv[4], &dwarfTypeCode) != TCL_OK)
 	return TCL_ERROR;
 
-    auto val = builder->createBasicType(name, (uint64_t) size,
-#ifndef API_4
-					(uint64_t) align,
-#endif // !API_4
-					(unsigned) dwarfTypeCode);
+    auto val = builder->createBasicType(name, uint64_t(size),
+					unsigned(dwarfTypeCode));
     Tcl_SetObjResult(interp, NewMetadataObj(val, "BasicType"));
     return TCL_OK;
 }
@@ -548,8 +528,8 @@ DefineStructType(
 	elements.push_back(type);
     }
 
-    auto val = builder->createStructType(scope, name, file, (unsigned) line,
-	    (uint64_t) size, align, NO_FLAGS, nullptr,
+    auto val = builder->createStructType(scope, name, file, unsigned(line),
+	    uint64_t(size), align, DINode::FlagZero, nullptr,
 	    builder->getOrCreateArray(elements));
 
     Tcl_SetObjResult(interp, NewMetadataObj(val, "StructType"));
@@ -594,9 +574,6 @@ DefineFunctionType(
     }
 
     auto val = builder->createSubroutineType(
-#ifndef API_3
-	    file,
-#endif // API_3
 	    builder->getOrCreateTypeArray(elements));
 
     Tcl_SetObjResult(interp, NewMetadataObj(val, "FunctionType"));
@@ -728,8 +705,7 @@ DefineParameter(
     if (Tcl_GetIntFromObj(interp, objv[4], &argIndex) != TCL_OK)
 	return TCL_ERROR;
     if (argIndex < 1) {
-	Tcl_SetObjResult(interp, Tcl_NewStringObj(
-		"argument indices must be at least 1", -1));
+	SetStringResult(interp, "argument indices must be at least 1");
 	return TCL_ERROR;
     }
     DIFile *file;
@@ -741,15 +717,8 @@ DefineParameter(
     if (GetMetadataFromObj(interp, objv[7], "type", type) != TCL_OK)
 	return TCL_ERROR;
 
-#ifdef API_3
     auto val = builder->createParameterVariable(scope, name,
-	    (unsigned) argIndex, file, (unsigned) line, type, true);
-#else
-    // This API was deprecated (and made private) after 3.7
-    auto val = builder->createLocalVariable(
-	    llvm::dwarf::DW_TAG_arg_variable, scope, name, file,
-	    (unsigned) line, type, true, 0, (unsigned) argIndex);
-#endif // API_3
+	    unsigned(argIndex), file, unsigned(line), type, true);
 
     Tcl_SetObjResult(interp, NewMetadataObj(val, "Variable"));
     return TCL_OK;
@@ -795,15 +764,8 @@ DefineLocal(
     if (GetMetadataFromObj(interp, objv[6], "type", type) != TCL_OK)
 	return TCL_ERROR;
 
-#ifdef API_3
     auto val = builder->createAutoVariable(scope, name,
-	    file, (unsigned) line, type, true);
-#else
-    // This API was deprecated (and made private) after 3.7
-    auto val = builder->createLocalVariable(
-	    dwarf::DW_TAG_auto_variable, scope, name, file,
-	    (unsigned) line, type, true);
-#endif // API_3
+	    file, unsigned(line), type, true);
 
     Tcl_SetObjResult(interp, NewMetadataObj(val, "Variable"));
     return TCL_OK;
@@ -828,7 +790,7 @@ DefineFunction(
 {
     if (objc != 8) {
 	Tcl_WrongNumArgs(interp, 1, objv,
-		"DIBuilder scope name linkName file line subroutineType");
+		"DIBuilder scope name mangledName file line subroutineType");
 	return TCL_ERROR;
     }
 
@@ -852,7 +814,7 @@ DefineFunction(
     bool isOpt = true, isLocal = true, isDef = true;
 
     auto val = builder->createFunction(scope, name, linkName, file, line,
-	    type, isLocal, isDef, line, NO_FLAGS, isOpt);
+	    type, isLocal, isDef, line, DINode::FlagZero, isOpt);
 
     Tcl_SetObjResult(interp, NewMetadataObj(val, "Function"));
     return TCL_OK;
@@ -877,7 +839,7 @@ BuildDbgValue(
 {
     if (objc != 6) {
 	Tcl_WrongNumArgs(interp, 1, objv,
-		"dibuilder builder value location variableInfo");
+		"DIBuilder builder value location variableInfo");
 	return TCL_ERROR;
     }
 
@@ -905,7 +867,7 @@ BuildDbgValue(
 #endif // !API_6
 	    varInfo, expr, location, b->GetInsertBlock());
 
-    Tcl_SetObjResult(interp, NewValueObj(inst));
+    Tcl_SetObjResult(interp, NewObj(inst));
     return TCL_OK;
 }
 

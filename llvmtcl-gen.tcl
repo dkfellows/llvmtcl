@@ -20,6 +20,8 @@ proc val_as_obj {type value} {
 	"LLVMTypeRef" -
 	"LLVMPassManagerRef" -
 	"LLVMPassManagerBuilderRef" -
+	"LLVMTargetDataRef" -
+	"LLVMTargetMachineRef" -
 	"LLVMUseRef" -
 	"LLVMGenericValueRef" -
 	"LLVMModuleRef" {
@@ -173,6 +175,8 @@ proc gen_api_call {cf of l} {
 		"LLVMUseRef" -
 		"LLVMPassManagerRef" -
 		"LLVMPassManagerBuilderRef" -
+		"LLVMTargetDataRef" -
+		"LLVMTargetMachineRef" -
 		"LLVMModuleRef" {
 		    puts $cf "    $fargtype arg$n = 0;"
 		    puts $cf "    if (Get${fargtype}FromObj(interp, objv\[$on\], arg$n) != TCL_OK)"

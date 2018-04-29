@@ -37,7 +37,7 @@ AC_CONFIG_AUX_DIR(tclconfig)
 #--------------------------------------------------------------------
 
 AC_ARG_WITH(llvm-config,
-    AC_HELP_STRING([--with-llvm-config=FILE],
+    AS_HELP_STRING([--with-llvm-config=FILE],
 	[exact name of LLVM configuration description program; will be
 	    searched for on the PATH if not already fully qualified
 	    (llvm-config)]),
@@ -48,7 +48,13 @@ AS_IF([test "x$LLVMCONFIG" = "xno"], [
 	AC_MSG_ERROR(llvm-config not usable)])
 AC_MSG_CHECKING([for llvm-config usability])
 AS_IF([llvm_version=`$LLVMCONFIG --version`], [
-	AC_MSG_RESULT(seems fine (version: $llvm_version))], [
+	case $llvm_version in
+		[[123]].*)
+			AC_MSG_ERROR(LLVM $llvm_version unsupported; please use at least 4.0) ;;
+		*)
+			llvmshared=`$LLVMCONFIG --shared-mode`
+			AC_MSG_RESULT([seems fine (version: ]$llvm_version[, mode: ]$llvmshared[)]) ;;
+	esac], [
 	AC_MSG_ERROR(llvm-config not usable)])
 AC_SUBST(LLVMCONFIG)
 llvmbindir=`$LLVMCONFIG --bindir`
@@ -56,10 +62,7 @@ AC_DEFINE_UNQUOTED([LLVMBINDIR], ["$llvmbindir"])
 # llvm-config --system-libs is rubbish!
 # See https://github.com/rust-lang/rust/issues/34486
 # See https://github.com/llvm-mirror/llvm/blob/7d7a23e700b5074c86834f1e597703bc58f637a8/tools/llvm-config/llvm-config.cpp#L680
-case $llvm_version in
-    2.* | 3.[1234567].*) ;;
-    *)	AC_SEARCH_LIBS([ffi_call], [ffi]);;
-esac
+AC_SEARCH_LIBS([ffi_call], [ffi], [])
 
 #--------------------------------------------------------------------
 # Load the tclConfig.sh file

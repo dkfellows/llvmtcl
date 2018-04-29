@@ -26,7 +26,7 @@ MODULE_SCOPE int	GetTypeFromObj(Tcl_Interp *interp, Tcl_Obj *obj,
 			    llvm::Type *&type);
 MODULE_SCOPE int	GetValueFromObj(Tcl_Interp *interp, Tcl_Obj *obj,
 			    llvm::Value *&module);
-MODULE_SCOPE Tcl_Obj *	NewValueObj(llvm::Value *value);
+MODULE_SCOPE Tcl_Obj *	NewObj(llvm::Value *value);
 
 extern "C" double	__powidf2(double a, int b);
 
@@ -73,6 +73,45 @@ MODULE_SCOPE int	GetLLVMTypeRefFromObj(Tcl_Interp*, Tcl_Obj*,
 			    LLVMTypeRef&);
 MODULE_SCOPE int	GetLLVMValueRefFromObj(Tcl_Interp*, Tcl_Obj*,
 			    LLVMValueRef&);
+
+static inline void
+SetStringResult(
+    Tcl_Interp *interp,
+    std::string msg)
+{
+    Tcl_SetObjResult(interp, Tcl_NewStringObj(msg.c_str(), msg.size()));
+}
+
+static inline void
+SetStringResult(
+    Tcl_Interp *interp,
+    const char *msg)
+{
+    Tcl_SetObjResult(interp, Tcl_NewStringObj(msg, -1));
+}
+
+namespace tcl {
+    typedef Tcl_Obj *value;
+}
+
+static inline tcl::value
+NewObj(const std::string &str)
+{
+    return Tcl_NewStringObj(str.c_str(), str.length());
+}
+
+static inline tcl::value
+NewObj(bool boolean)
+{
+    return Tcl_NewBooleanObj(boolean);
+}
+
+static inline tcl::value
+NewObj(const std::vector<tcl::value> &vec)
+{
+    return Tcl_NewListObj(vec.size(), vec.data());
+}
+
 template<typename T>//T subclass of llvm::Type
 static inline int
 GetTypeFromObj(
@@ -85,8 +124,7 @@ GetTypeFromObj(
     if (GetLLVMTypeRefFromObj(interp, obj, typeref) != TCL_OK)
 	return TCL_ERROR;
     if (!(type = llvm::dyn_cast<T>(llvm::unwrap(typeref)))) {
-	Tcl_SetObjResult(interp,
-		Tcl_NewStringObj(msg.c_str(), msg.size()));
+	SetStringResult(interp, msg);
 	return TCL_ERROR;
     }
     return TCL_OK;
@@ -104,19 +142,10 @@ GetValueFromObj(
     if (GetLLVMValueRefFromObj(interp, obj, valref) != TCL_OK)
 	return TCL_ERROR;
     if (!(value = llvm::dyn_cast<T>(llvm::unwrap(valref)))) {
-	Tcl_SetObjResult(interp,
-		Tcl_NewStringObj(msg.c_str(), msg.size()));
+	SetStringResult(interp, msg);
 	return TCL_ERROR;
     }
     return TCL_OK;
-}
-
-static inline void
-SetStringResult(
-    Tcl_Interp *interp,
-    std::string msg)
-{
-    Tcl_SetObjResult(interp, Tcl_NewStringObj(msg.c_str(), msg.size()));
 }
 
 MODULE_SCOPE Tcl_Obj* SetLLVMValueRefAsObj(

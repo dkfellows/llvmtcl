@@ -1,7 +1,7 @@
 This is the llvmtcl extension based on the Tcl Extension Architecture (TEA).
 Please see the webpage
 
-	http://github.com/jdc8/llvmtcl
+	http://github.com/dkfellows/llvmtcl
 
 or
 
@@ -18,8 +18,7 @@ REQUIREMENTS
 ============
 
 - Tcl 8.6
-- LLVM 3.7, 3.8, 3.9, 4.0, 5.0 or 6.0
-  (4.0 or later is recommended for performance reasons on large functions)
+- LLVM 4.0, 5.0 or 6.0
 
 CONTENTS
 ========
