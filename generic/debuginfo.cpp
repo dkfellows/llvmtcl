@@ -1,3 +1,14 @@
+/*
+ * debuginfo.cpp --
+ *
+ *	This file contains the bindings to the LLVM metadata system.
+ *
+ * Copyright (c) 2015-2018 Donal K. Fellows.
+ *
+ * See the file "license.terms" for information on usage and redistribution of
+ * this file, and for a DISCLAIMER OF ALL WARRANTIES.
+ */
+
 #include "tcl.h"
 #include <map>
 #include "llvm/IR/DIBuilder.h"

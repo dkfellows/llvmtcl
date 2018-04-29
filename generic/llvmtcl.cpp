@@ -1,3 +1,18 @@
+/*
+ * llvmtcl.cpp --
+ *
+ *	This file contains the bulk of the mapping of LLVM into Tcl. It's
+ *	built partly from automatically-generated code in the generated
+ *	subdirectory.
+ *
+ * Copyright (c) 2010-2016 Jos Decoster.
+ * Copyright (c) 2014-2018 Donal K. Fellows.
+ * Copyright (c) 2018 Kevin B. Kenny.
+ *
+ * See the file "license.terms" for information on usage and redistribution of
+ * this file, and for a DISCLAIMER OF ALL WARRANTIES.
+ */
+
 #include <tcl.h>
 #include <tclTomMath.h>
 #include <iostream>

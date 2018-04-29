@@ -1,3 +1,17 @@
+/*
+ * llvmtcl.h --
+ *
+ *	This file contains internal cross-file API definitions for llvmtcl. It
+ *	is not a public header file.
+ *
+ * Copyright (c) 2010-2016 Jos Decoster.
+ * Copyright (c) 2014-2018 Donal K. Fellows.
+ * Copyright (c) 2018 Kevin B. Kenny.
+ *
+ * See the file "license.terms" for information on usage and redistribution of
+ * this file, and for a DISCLAIMER OF ALL WARRANTIES.
+ */
+
 #include "tcl.h"
 #include <string>
 #include "llvm/IR/DIBuilder.h"

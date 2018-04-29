@@ -1,3 +1,16 @@
+/*
+ * execute.cpp --
+ *
+ *	This file contains the custom bindings used to make it possible to run
+ *	code within a Tcl interpreter that interacts with the interpreter.
+ *
+ * Copyright (c) 2010-2016 Jos Decoster.
+ * Copyright (c) 2014-2018 Donal K. Fellows.
+ *
+ * See the file "license.terms" for information on usage and redistribution of
+ * this file, and for a DISCLAIMER OF ALL WARRANTIES.
+ */
+
 #include <tcl.h>
 #include "llvmtcl.h"
 #include "version.h"

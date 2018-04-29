@@ -1,3 +1,14 @@
+/*
+ * intrinsics.cpp --
+ *
+ *	This file contains the handling of LLVM's intrinsics.
+ *
+ * Copyright (c) 2015-2018 Donal K. Fellows.
+ *
+ * See the file "license.terms" for information on usage and redistribution of
+ * this file, and for a DISCLAIMER OF ALL WARRANTIES.
+ */
+
 #include "llvmtcl.h"
 #include <tcl.h>
 #include <llvm/IR/Intrinsics.h>

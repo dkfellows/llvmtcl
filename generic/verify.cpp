@@ -1,3 +1,15 @@
+/*
+ * verify.cpp --
+ *
+ *	This file contains the interface to LLVM's IR verifier, required
+ *	because the built-in LLVM C API for doing this is nasty and incomplete.
+ *
+ * Copyright (c) 2018 Donal K. Fellows.
+ *
+ * See the file "license.terms" for information on usage and redistribution of
+ * this file, and for a DISCLAIMER OF ALL WARRANTIES.
+ */
+
 #include <tcl.h>
 #include <llvm/IR/Verifier.h>
 #include "llvmtcl.h"

@@ -1,3 +1,15 @@
+/*
+ * module.cpp --
+ *
+ *	This file contains the Tcl commands for working with modules.
+ *
+ * Copyright (c) 2015-2018 Donal K. Fellows.
+ * Copyright (c) 2018 Kevin B. Kenny.
+ *
+ * See the file "license.terms" for information on usage and redistribution of
+ * this file, and for a DISCLAIMER OF ALL WARRANTIES.
+ */
+
 #include <tcl.h>
 #include "llvmtcl.h"
 #include <llvm/Transforms/Utils/Cloning.h>

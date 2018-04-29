@@ -1,3 +1,16 @@
+/*
+ * attributes.cpp --
+ *
+ *	This file contains handling of LLVM's attributes. Can't be mapped
+ *	ordinarily as there are more attribute flags than bits in a 32-bit
+ *	integer.
+ *
+ * Copyright (c) 2016-2018 Donal K. Fellows.
+ *
+ * See the file "license.terms" for information on usage and redistribution of
+ * this file, and for a DISCLAIMER OF ALL WARRANTIES.
+ */
+
 #include "llvmtcl.h"
 #include "version.h"
 #include "llvm/IR/CallSite.h"
