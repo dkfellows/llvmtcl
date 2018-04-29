@@ -15,7 +15,7 @@
  * ------------------------------------------------------------------------
  */
 
-int VerifyFunctionObjCmd(
+int VerifyFunction(
     ClientData clientData,
     Tcl_Interp* interp,
     int objc,
@@ -67,7 +67,7 @@ int VerifyFunctionObjCmd(
  * ------------------------------------------------------------------------
  */
 
-int VerifyModuleObjCmd(
+int VerifyModule(
     ClientData clientData,
     Tcl_Interp* interp,
     int objc,

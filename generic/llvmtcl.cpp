@@ -830,14 +830,14 @@ DLLEXPORT int Llvmtcl_Init(Tcl_Interp *interp)
     LLVMObjCmd("llvmtcl::ParseCommandLineOptions", ParseCommandLineOptions);
     LLVMObjCmd("llvmtcl::TokenType", TokenType);
     LLVMObjCmd("llvmtcl::ConstNone", ConstNone);
-    LLVMObjCmd("llvmtcl::VerifyModule", VerifyModuleObjCmd);
-    LLVMObjCmd("llvmtcl::VerifyFunction", VerifyFunctionObjCmd);
+    LLVMObjCmd("llvmtcl::VerifyModule", VerifyModule);
+    LLVMObjCmd("llvmtcl::VerifyFunction", VerifyFunction);
     LLVMObjCmd("llvmtcl::CreateGenericValueOfTclInterp",
 	    CreateGenericValueOfTclInterp);
     LLVMObjCmd("llvmtcl::CreateGenericValueOfTclObj",
 	    CreateGenericValueOfTclObj);
     LLVMObjCmd("llvmtcl::GenericValueToTclObj", GenericValueToTclObj);
-    LLVMObjCmd("llvmtcl::AddLLVMTclCommands", LLVMAddLLVMTclCommandsObjCmd);
+    LLVMObjCmd("llvmtcl::AddLLVMTclCommands", AddLLVMTclTestCommands);
     LLVMObjCmd("llvmtcl::AddIncoming", AddIncoming);
     LLVMObjCmd("llvmtcl::BuildAggregateRet", BuildAggregateRet);
     LLVMObjCmd("llvmtcl::BuildInvoke", BuildInvoke);
@@ -847,9 +847,8 @@ DLLEXPORT int Llvmtcl_Init(Tcl_Interp *interp)
     LLVMObjCmd("llvmtcl::GetBasicBlocks", GetBasicBlocks);
     LLVMObjCmd("llvmtcl::CallInitialisePackageFunction",
 	    CallInitialisePackageFunction);
-    LLVMObjCmd("llvmtcl::GetIntrinsicDefinition",
-	    LLVMGetIntrinsicDefinitionObjCmd);
-    LLVMObjCmd("llvmtcl::GetIntrinsicID", LLVMGetIntrinsicIDObjCmd);
+    LLVMObjCmd("llvmtcl::GetIntrinsicDefinition", GetIntrinsicDefinition);
+    LLVMObjCmd("llvmtcl::GetIntrinsicID", GetIntrinsicID);
     LLVMObjCmd("llvmtcl::NamedStructType", NamedStructType);
     LLVMObjCmd("llvmtcl::CreateMCJITCompilerForModule",
 	    CreateMCJITCompilerForModule);
@@ -883,14 +882,14 @@ DLLEXPORT int Llvmtcl_Init(Tcl_Interp *interp)
 	    SetInstructionLocation);
     LLVMObjCmd("llvmtcl::DebugInfo::AttachToFunction", AttachToFunction);
 
-    LLVMObjCmd("llvmtcl::AddFunctionAttr", LLVMAddFunctionAttrObjCmd);
-    LLVMObjCmd("llvmtcl::GetFunctionAttr", LLVMGetFunctionAttrObjCmd);
-    LLVMObjCmd("llvmtcl::RemoveFunctionAttr", LLVMRemoveFunctionAttrObjCmd);
-    LLVMObjCmd("llvmtcl::AddArgumentAttribute", LLVMAddAttributeObjCmd);
-    LLVMObjCmd("llvmtcl::RemoveArgumentAttribute", LLVMRemoveAttributeObjCmd);
-    LLVMObjCmd("llvmtcl::GetArgumentAttribute", LLVMGetAttributeObjCmd);
-    LLVMObjCmd("llvmtcl::AddCallAttribute", LLVMAddInstrAttributeObjCmd);
-    LLVMObjCmd("llvmtcl::RemoveCallAttribute", LLVMRemoveInstrAttributeObjCmd);
+    LLVMObjCmd("llvmtcl::AddFunctionAttr", AddFunctionAttr);
+    LLVMObjCmd("llvmtcl::GetFunctionAttr", GetFunctionAttr);
+    LLVMObjCmd("llvmtcl::RemoveFunctionAttr", RemoveFunctionAttr);
+    LLVMObjCmd("llvmtcl::AddArgumentAttribute", AddAttribute);
+    LLVMObjCmd("llvmtcl::RemoveArgumentAttribute", RemoveAttribute);
+    LLVMObjCmd("llvmtcl::GetArgumentAttribute", GetAttribute);
+    LLVMObjCmd("llvmtcl::AddCallAttribute", AddInstrAttribute);
+    LLVMObjCmd("llvmtcl::RemoveCallAttribute", RemoveInstrAttribute);
 
     LLVMStrVar("llvmtcl::llvm_version", LLVM_VERSION_STRING);
     LLVMStrVar("llvmtcl::host_triple", LLVMTCL_TARGET);

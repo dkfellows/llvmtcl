@@ -156,7 +156,7 @@ MakeIntrinsicIsOverloadedError(
  */
 
 MODULE_SCOPE int
-LLVMGetIntrinsicDefinitionObjCmd(
+GetIntrinsicDefinition(
     ClientData clientData,
     Tcl_Interp *interp,
     int objc,
@@ -288,7 +288,7 @@ LLVMGetIntrinsicDefinitionObjCmd(
  */
 
 MODULE_SCOPE int
-LLVMGetIntrinsicIDObjCmd(
+GetIntrinsicID(
     ClientData clientData,
     Tcl_Interp *interp,
     int objc,

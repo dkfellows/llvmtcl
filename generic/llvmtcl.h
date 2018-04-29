@@ -55,22 +55,22 @@ DECL_CMD(DefineUnspecifiedType);
 DECL_CMD(DisposeDebugBuilder);
 DECL_CMD(SetInstructionLocation);
 // testcode.cpp
-DECL_CMD(LLVMAddLLVMTclCommandsObjCmd);
+DECL_CMD(AddLLVMTclTestCommands);
 // attributes.cpp
-DECL_CMD(LLVMAddAttributeObjCmd);
-DECL_CMD(LLVMAddFunctionAttrObjCmd);
-DECL_CMD(LLVMAddInstrAttributeObjCmd);
-DECL_CMD(LLVMGetAttributeObjCmd);
-DECL_CMD(LLVMGetFunctionAttrObjCmd);
-DECL_CMD(LLVMRemoveAttributeObjCmd);
-DECL_CMD(LLVMRemoveFunctionAttrObjCmd);
-DECL_CMD(LLVMRemoveInstrAttributeObjCmd);
+DECL_CMD(AddAttribute);
+DECL_CMD(AddFunctionAttr);
+DECL_CMD(AddInstrAttribute);
+DECL_CMD(GetAttribute);
+DECL_CMD(GetFunctionAttr);
+DECL_CMD(RemoveAttribute);
+DECL_CMD(RemoveFunctionAttr);
+DECL_CMD(RemoveInstrAttribute);
 // intrinsics.cpp
-DECL_CMD(LLVMGetIntrinsicDefinitionObjCmd);
-DECL_CMD(LLVMGetIntrinsicIDObjCmd);
+DECL_CMD(GetIntrinsicDefinition);
+DECL_CMD(GetIntrinsicID);
 // verify.cpp
-DECL_CMD(VerifyFunctionObjCmd);
-DECL_CMD(VerifyModuleObjCmd);
+DECL_CMD(VerifyFunction);
+DECL_CMD(VerifyModule);
 // module.cpp
 DECL_CMD(CopyModuleFromModule);
 DECL_CMD(CreateMCJITCompilerForModule);

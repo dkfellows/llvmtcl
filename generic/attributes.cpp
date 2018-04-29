@@ -127,7 +127,7 @@ DescribeAttributes(
 /*
  * ----------------------------------------------------------------------
  *
- * LLVMAddFunctionAttrObjCmd --
+ * AddFunctionAttr --
  *
  *	Command implementation for [llvm::AddFunctionAttr].
  *
@@ -135,7 +135,7 @@ DescribeAttributes(
  */
 
 int
-LLVMAddFunctionAttrObjCmd(
+AddFunctionAttr(
     ClientData clientData,
     Tcl_Interp *interp,
     int objc,
@@ -159,7 +159,7 @@ LLVMAddFunctionAttrObjCmd(
 /*
  * ----------------------------------------------------------------------
  *
- * LLVMRemoveFunctionAttrObjCmd --
+ * RemoveFunctionAttr --
  *
  *	Command implementation for [llvm::RemoveFunctionAttr].
  *
@@ -167,7 +167,7 @@ LLVMAddFunctionAttrObjCmd(
  */
 
 int
-LLVMRemoveFunctionAttrObjCmd(
+RemoveFunctionAttr(
     ClientData clientData,
     Tcl_Interp *interp,
     int objc,
@@ -191,7 +191,7 @@ LLVMRemoveFunctionAttrObjCmd(
 /*
  * ----------------------------------------------------------------------
  *
- * LLVMGetFunctionAttrObjCmd --
+ * GetFunctionAttr --
  *
  *	Command implementation for [llvm::GetFunctionAttr].
  *
@@ -199,7 +199,7 @@ LLVMRemoveFunctionAttrObjCmd(
  */
 
 int
-LLVMGetFunctionAttrObjCmd(
+GetFunctionAttr(
     ClientData clientData,
     Tcl_Interp *interp,
     int objc,
@@ -227,7 +227,7 @@ LLVMGetFunctionAttrObjCmd(
 /*
  * ----------------------------------------------------------------------
  *
- * LLVMAddAttributeObjCmd --
+ * AddAttribute --
  *
  *	Command implementation for [llvm::AddArgumentAttribute].
  *
@@ -235,7 +235,7 @@ LLVMGetFunctionAttrObjCmd(
  */
 
 int
-LLVMAddAttributeObjCmd(
+AddAttribute(
     ClientData clientData,
     Tcl_Interp *interp,
     int objc,
@@ -290,7 +290,7 @@ LLVMAddAttributeObjCmd(
 /*
  * ----------------------------------------------------------------------
  *
- * LLVMRemoveAttributeObjCmd --
+ * RemoveAttribute --
  *
  *	Command implementation for [llvm::RemoveArgumentAttribute].
  *
@@ -298,7 +298,7 @@ LLVMAddAttributeObjCmd(
  */
 
 int
-LLVMRemoveAttributeObjCmd(
+RemoveAttribute(
     ClientData clientData,
     Tcl_Interp *interp,
     int objc,
@@ -327,7 +327,7 @@ LLVMRemoveAttributeObjCmd(
 /*
  * ----------------------------------------------------------------------
  *
- * LLVMGetAttributeObjCmd --
+ * GetAttribute --
  *
  *	Command implementation for [llvm::GetArgumentAttribute].
  *
@@ -335,7 +335,7 @@ LLVMRemoveAttributeObjCmd(
  */
 
 int
-LLVMGetAttributeObjCmd(
+GetAttribute(
     ClientData clientData,
     Tcl_Interp *interp,
     int objc,
@@ -364,7 +364,7 @@ LLVMGetAttributeObjCmd(
 /*
  * ----------------------------------------------------------------------
  *
- * LLVMAddInstrAttributeObjCmd --
+ * AddInstrAttribute --
  *
  *	Command implementation for [llvm::AddCallAttribute].
  *
@@ -372,7 +372,7 @@ LLVMGetAttributeObjCmd(
  */
 
 int
-LLVMAddInstrAttributeObjCmd(
+AddInstrAttribute(
     ClientData clientData,
     Tcl_Interp *interp,
     int objc,
@@ -406,7 +406,7 @@ LLVMAddInstrAttributeObjCmd(
 /*
  * ----------------------------------------------------------------------
  *
- * LLVMRemoveInstrAttributeObjCmd --
+ * RemoveInstrAttribute --
  *
  *	Command implementation for [llvm::RemoveCallAttribute].
  *
@@ -414,7 +414,7 @@ LLVMAddInstrAttributeObjCmd(
  */
 
 int
-LLVMRemoveInstrAttributeObjCmd(
+RemoveInstrAttribute(
     ClientData clientData,
     Tcl_Interp *interp,
     int objc,
