@@ -5,8 +5,6 @@
 #include "llvmtcl.h"
 #include "version.h"
 
-#define NO_FLAGS DINode::FlagZero
-
 using namespace llvm;
 
 static std::map<std::string, MDNode*> Metadata_map;
