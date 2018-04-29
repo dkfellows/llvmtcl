@@ -2379,9 +2379,7 @@ if llvm_version=`$LLVMCONFIG --version`; then :
 		*)
 			llvmshared=`$LLVMCONFIG --shared-mode`
 			{ $as_echo "$as_me:${as_lineno-$LINENO}: result: seems fine (version: $llvm_version, mode: $llvmshared)" >&5
-$as_echo "seems fine (version: $llvm_version, mode: $llvmshared)" >&6; }
-
-			;;
+$as_echo "seems fine (version: $llvm_version, mode: $llvmshared)" >&6; } ;;
 	esac
 else
 
@@ -5481,7 +5479,7 @@ esac
 #-----------------------------------------------------------------------
 
 
-    vars="llvmtcl.cpp debuginfo.cpp testcode.cpp powidf2.cpp attributes.cpp intrinsics.cpp"
+    vars="llvmtcl.cpp debuginfo.cpp testcode.cpp powidf2.cpp attributes.cpp intrinsics.cpp execute.cpp module.cpp verify.cpp"
     for i in $vars; do
 	case $i in
 	    \$*)

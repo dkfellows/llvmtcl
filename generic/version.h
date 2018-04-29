@@ -1,3 +1,15 @@
+/*
+ * version.h --
+ *
+ *	This file contains the preprocessor macros to determine what LLVM API
+ *	version is being used, as observable by llvmtcl.
+ *
+ * Copyright (c) 2017-2018 Donal K. Fellows.
+ *
+ * See the file "license.terms" for information on usage and redistribution of
+ * this file, and for a DISCLAIMER OF ALL WARRANTIES.
+ */
+
 #ifndef LLVMTCL_VERSION_H
 #define LLVMTCL_VERSION_H
 
@@ -20,7 +32,7 @@
 #endif // LLVM_VERSION_MAJOR > 4
 
 #endif // LLVMTCL_VERSION_H
-
+
 /*
  * Local Variables:
  * mode: c++
