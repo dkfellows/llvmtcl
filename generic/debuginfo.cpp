@@ -594,9 +594,6 @@ DefineFunctionType(
     }
 
     auto val = builder->createSubroutineType(
-#ifndef API_3
-	    file,
-#endif // API_3
 	    builder->getOrCreateTypeArray(elements));
 
     Tcl_SetObjResult(interp, NewMetadataObj(val, "FunctionType"));
@@ -740,15 +737,8 @@ DefineParameter(
     if (GetMetadataFromObj(interp, objv[7], "type", type) != TCL_OK)
 	return TCL_ERROR;
 
-#ifdef API_3
     auto val = builder->createParameterVariable(scope, name,
 	    unsigned(argIndex), file, unsigned(line), type, true);
-#else
-    // This API was deprecated (and made private) after 3.7
-    auto val = builder->createLocalVariable(
-	    llvm::dwarf::DW_TAG_arg_variable, scope, name, file,
-	    unsigned(line), type, true, 0, unsigned(argIndex));
-#endif // API_3
 
     Tcl_SetObjResult(interp, NewMetadataObj(val, "Variable"));
     return TCL_OK;
@@ -794,15 +784,8 @@ DefineLocal(
     if (GetMetadataFromObj(interp, objv[6], "type", type) != TCL_OK)
 	return TCL_ERROR;
 
-#ifdef API_3
     auto val = builder->createAutoVariable(scope, name,
 	    file, unsigned(line), type, true);
-#else
-    // This API was deprecated (and made private) after 3.7
-    auto val = builder->createLocalVariable(
-	    dwarf::DW_TAG_auto_variable, scope, name, file,
-	    unsigned(line), type, true);
-#endif // API_3
 
     Tcl_SetObjResult(interp, NewMetadataObj(val, "Variable"));
     return TCL_OK;

@@ -8,11 +8,7 @@
 #include <llvm/Support/Host.h>
 
 #include "version.h"
-#ifdef API_2
 #include <llvm/IR/PassManager.h>
-#else // !API_2
-#include <llvm/PassManager.h>
-#endif // API_2
 
 #include <llvm/Transforms/IPO/PassManagerBuilder.h>
 #include <llvm/Transforms/IPO.h>
@@ -79,8 +75,19 @@ ParseCommandLineOptionsObjCmd(
 
     std::string s;
     llvm::raw_string_ostream os(s);
+#ifdef API_5
     bool result = llvm::cl::ParseCommandLineOptions(
 	    objc, argv.data(), "called from Tcl", &os);
+#else // !API_5
+    /*
+     * Errors are splurged straight to stderr. Marginally better than losing
+     * them entirely.
+     */
+    bool result = llvm::cl::ParseCommandLineOptions(
+	    objc, argv.data(), "called from Tcl");
+    if (!result)
+	os << "failed to parse command line options";
+#endif // API_5
     os.flush();
     if (!result) {
 	TrimRight(s);
@@ -197,6 +204,14 @@ NewObj(
 Tcl_Obj *
 NewObj(
     llvm::Value *value)
+{
+    auto ref = llvm::wrap(value);
+    return SetLLVMValueRefAsObj(nullptr, ref);
+}
+
+Tcl_Obj *
+NewObj(
+    const llvm::Value *value)
 {
     auto ref = llvm::wrap(value);
     return SetLLVMValueRefAsObj(nullptr, ref);
@@ -1033,7 +1048,6 @@ WriteModuleMachineCodeToFileCmd(
     return TCL_OK;
 }
 
-#ifdef API_3
 static int
 TokenTypeObjCmd(
     ClientData clientData,
@@ -1069,7 +1083,6 @@ ConstNoneObjCmd(
     Tcl_SetObjResult(interp, NewObj(noneConstant));
     return TCL_OK;
 }
-#endif // API_3
 
 static const char *
 StoreExternalStringInTclVar(
@@ -1126,10 +1139,8 @@ DLLEXPORT int Llvmtcl_Init(Tcl_Interp *interp)
 
     LLVMObjCmd("llvmtcl::ParseCommandLineOptions",
 	    ParseCommandLineOptionsObjCmd);
-#ifdef API_3
     LLVMObjCmd("llvmtcl::TokenType", TokenTypeObjCmd);
     LLVMObjCmd("llvmtcl::ConstNone", ConstNoneObjCmd);
-#endif // API_3
     LLVMObjCmd("llvmtcl::VerifyModule", VerifyModuleObjCmd);
     LLVMObjCmd("llvmtcl::VerifyFunction", VerifyFunctionObjCmd);
     LLVMObjCmd("llvmtcl::CreateGenericValueOfTclInterp",

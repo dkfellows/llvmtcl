@@ -15,22 +15,8 @@
 #endif // LLVM_VERSION_MAJOR > 4
 #if LLVM_VERSION_MAJOR > 3
 #define API_4 1
-#define API_3 1
-#define API_2 1
-#define API_1 1
-#elif LLVM_VERSION_MAJOR == 3
-#if LLVM_VERSION_MINOR > 7
-#define API_3 1
-#define API_2 1
-#define API_1 1
-#elif LLVM_VERSION_MINOR == 7
-#define API_2 1
-#define API_1 1
-#else // LLVM_VERSION_MINOR < 7
-#define API_1 1
-#endif // LLVM_VERSION_MINOR >= 7
-#else // LLVM_VERSION_MAJOR < 3
-#error Must be at least LLVM 3.0
+#else
+#error This version of LLVM is no longer supported; upgrade to 4.0 or later
 #endif // LLVM_VERSION_MAJOR > 3
 
 #endif // LLVMTCL_VERSION_H

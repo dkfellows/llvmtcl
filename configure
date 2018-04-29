@@ -2373,8 +2373,16 @@ fi
 $as_echo_n "checking for llvm-config usability... " >&6; }
 if llvm_version=`$LLVMCONFIG --version`; then :
 
-	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: seems fine (version: $llvm_version)" >&5
-$as_echo "seems fine (version: $llvm_version)" >&6; }
+	case $llvm_version in
+		[123].*)
+			as_fn_error $? "LLVM $llvm_version unsupported; please use at least 4.0" "$LINENO" 5 ;;
+		*)
+			llvmshared=`$LLVMCONFIG --shared-mode`
+			{ $as_echo "$as_me:${as_lineno-$LINENO}: result: seems fine (version: $llvm_version, mode: $llvmshared)" >&5
+$as_echo "seems fine (version: $llvm_version, mode: $llvmshared)" >&6; }
+
+			;;
+	esac
 else
 
 	as_fn_error $? "llvm-config not usable" "$LINENO" 5
@@ -2388,9 +2396,7 @@ _ACEOF
 # llvm-config --system-libs is rubbish!
 # See https://github.com/rust-lang/rust/issues/34486
 # See https://github.com/llvm-mirror/llvm/blob/7d7a23e700b5074c86834f1e597703bc58f637a8/tools/llvm-config/llvm-config.cpp#L680
-case $llvm_version in
-    2.* | 3.1234567.*) ;;
-    *)	ac_ext=c
+ac_ext=c
 ac_cpp='$CPP $CPPFLAGS'
 ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
 ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
@@ -3235,8 +3241,7 @@ if test "$ac_res" != no; then :
   test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
 
 fi
-;;
-esac
+
 
 #--------------------------------------------------------------------
 # Load the tclConfig.sh file
