@@ -13,8 +13,8 @@ REQUIREMENTS
 ============
 
 * Tcl 8.6
-* LLVM 3.7, 3.8, 3.9, 4.0, 5.0 or 6.0 (4.0 or later is recommended for performance reasons on large functions; the developers normally only check to see if builds work from 4.0 onwards)
-* Optional: CMake for Windows Build
+* LLVM 4.0, 5.0 or 6.0
+* Optional: CMake for [Windows Build](#windows-build)
 
 CONTENTS
 ========
@@ -76,7 +76,7 @@ You can build the `llvmtcl` package with VisualStudio 12 like this:
 64-Bit Build
 ------------
 
-You need to have built LLVM (e.g., 4.0) with CMake for x64 and should have an installed Tcl (e.g. ActiveTcl x64).
+You need to have built LLVM (version 4.0 or later) with CMake for x64 and should have an installed Tcl (e.g. ActiveTcl x64).
 
     c:\devel\tclllvm> md build_x64
     c:\devel\tclllvm> cd build_x64
@@ -88,7 +88,7 @@ by the `CMAKE_INSTALL_PREFIX` in a subdir like `lib/llvmtcl3.9`.
 
 32-Bit Build
 ------------
-You need to have built LLVM (e.g., 4.0) with CMake for x86 and should have an installed Tcl (e.g. ActiveTcl win32).
+You need to have built LLVM (version 4.0 or later) with CMake for x86 and should have an installed Tcl (e.g. ActiveTcl win32).
 
     c:\devel\tclllvm> md build_x86
     c:\devel\tclllvm> cd build_x86
@@ -126,7 +126,7 @@ USING llvmtcl
 
 * The package makes a `llvmtcl` ensemble command. The subcommands are the LLVM C
   API functions with LLVM trimmed from the front. All supported types,
-  enumerators and functions can be found in [here](http://github.com/jdc8/llvmtcl/blob/master/llvmtcl-gen.inp).
+  enumerators and functions can be found in [llvmtcl-gen.inp](http://github.com/dkfellows/llvmtcl/blob/master/llvmtcl-gen.inp).
 
 * Functions taking a pointer argument followed by an unsigned argument to
   specified the number of elements the pointer is pointing to are converted to
@@ -144,4 +144,4 @@ EXAMPLES
 
 `examples/ffidle.tcl` - Example calling functions in shared libraries
 
-For a more extensive example of use, see the tclquadcode project: http://core.tcl.tk/tclquadcode/
+For a more extensive example of use, see the [tclquadcode project](http://core.tcl.tk/tclquadcode/).
