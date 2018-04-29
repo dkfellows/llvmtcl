@@ -1,6 +1,16 @@
 #include <tcl.h>
 #include "llvmtcl.h"
 #include "version.h"
+
+/*
+ * ------------------------------------------------------------------------
+ *
+ * CreateGenericValueOfTclInterp --
+ *	Implements a Tcl command for mapping the current Tcl interpreter as an
+ *	LLVM GenericValue.
+ *
+ * ------------------------------------------------------------------------
+ */
 
 int
 CreateGenericValueOfTclInterp(
@@ -18,7 +28,17 @@ CreateGenericValueOfTclInterp(
     Tcl_SetObjResult(interp, SetLLVMGenericValueRefAsObj(interp, rt));
     return TCL_OK;
 }
+/*
+ * ------------------------------------------------------------------------
+ *
+ * CreateGenericValueOfTclObj --
+ *	Implements a Tcl command for mapping a Tcl value as an LLVM
+ *	GenericValue.
+ *
+ * ------------------------------------------------------------------------
+ */
 
+
 int
 CreateGenericValueOfTclObj(
     ClientData clientData,
@@ -36,6 +56,16 @@ CreateGenericValueOfTclObj(
     Tcl_SetObjResult(interp, SetLLVMGenericValueRefAsObj(interp, rt));
     return TCL_OK;
 }
+
+/*
+ * ------------------------------------------------------------------------
+ *
+ * GenericValueToTclObj --
+ *	Implements a Tcl command for reinterpreting an LLVM GenericValue (of a
+ *	Tcl_Obj*) as a Tcl value in the result.
+ *
+ * ------------------------------------------------------------------------
+ */
 
 int
 GenericValueToTclObj(
@@ -57,6 +87,21 @@ GenericValueToTclObj(
     Tcl_SetObjResult(interp, rt);
     return TCL_OK;
 }
+
+/*
+ * ------------------------------------------------------------------------
+ *
+ * CallInitialisePackageFunction --
+ *	Implements a Tcl command for calling a function (assumed to be a
+ *	standard Tcl package initialisation function) within the given
+ *	execution engine.
+ *
+ *	This command may cause the interpreter to crash; it is up to the
+ *	caller to ensure that the function will leave the system in a defined
+ *	state.
+ *
+ * ------------------------------------------------------------------------
+ */
 
 int
 CallInitialisePackageFunction(
@@ -89,7 +134,7 @@ CallInitialisePackageFunction(
 
     return initFunction(interp);
 }
-
+
 /*
  * Local Variables:
  * mode: c++

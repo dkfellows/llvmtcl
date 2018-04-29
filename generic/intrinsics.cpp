@@ -30,6 +30,15 @@ using namespace llvm;
 TCL_DECLARE_MUTEX(initLock)
 static unordered_map<string, Intrinsic::ID> *intrMap;
 static bool intrMapInit = false;
+
+/*
+ * ------------------------------------------------------------------------
+ *
+ * GetLLVMIntrinsicIDFromObj --
+ *	Converts the name of an intrinsic into its ID.
+ *
+ * ------------------------------------------------------------------------
+ */
 
 static inline int
 GetLLVMIntrinsicIDFromObj(
@@ -65,6 +74,15 @@ GetLLVMIntrinsicIDFromObj(
     id = search->second;
     return TCL_OK;
 }
+
+/*
+ * ------------------------------------------------------------------------
+ *
+ * NewIntrinsicIDObj --
+ *	Converts the ID of an intrinsic into a Tcl value.
+ *
+ * ------------------------------------------------------------------------
+ */
 
 static inline Tcl_Obj *
 NewIntrinsicIDObj(
@@ -79,9 +97,14 @@ NewIntrinsicIDObj(
 }
 
 /*
- * The Tcl commands that reach into the table of intrinsics. They're made as
- * safe as possible. Intrinsics mostly look like (special) function
- * definitions to the rest of LLVM.
+ * ------------------------------------------------------------------------
+ *
+ * MakeIntrinsicIsOverloadedError --
+ *	Constructs a Tcl error message (with some useful information) that is
+ *	used when an intrinsic doesn't have the right type specialisation
+ *	information (not needed for all intrinsics).
+ *
+ * ------------------------------------------------------------------------
  */
 
 static inline void
@@ -118,6 +141,19 @@ MakeIntrinsicIsOverloadedError(
 	Tcl_AppendResult(interp, ")", NULL);
     }
 }
+
+/*
+ * ------------------------------------------------------------------------
+ *
+ * LLVMGetIntrinsicDefinitionObjCmd --
+ *	Implements a Tcl command for correctly getting an LLVM intrinsic.
+ *
+ *	Makes reaching into the table of intrinsics as safe as possible.
+ *	Intrinsics mostly look like (special) function definitions to the rest
+ *	of LLVM.
+ *
+ * ------------------------------------------------------------------------
+ */
 
 MODULE_SCOPE int
 LLVMGetIntrinsicDefinitionObjCmd(
@@ -240,6 +276,16 @@ LLVMGetIntrinsicDefinitionObjCmd(
     Tcl_SetObjResult(interp, SetLLVMValueRefAsObj(interp, intrinsic));
     return TCL_OK;
 }
+
+/*
+ * ------------------------------------------------------------------------
+ *
+ * GetIntrinsicID --
+ *	Implements a Tcl command for getting the ID of an intrinsic (or the
+ *	empty string if the function is not an intrinsic).
+ *
+ * ------------------------------------------------------------------------
+ */
 
 MODULE_SCOPE int
 LLVMGetIntrinsicIDObjCmd(

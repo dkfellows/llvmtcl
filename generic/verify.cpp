@@ -2,8 +2,19 @@
 #include <llvm/IR/Verifier.h>
 #include "llvmtcl.h"
 #include "version.h"
+
+/*
+ * ------------------------------------------------------------------------
+ *
+ * VerifyFunction --
+ *	Implements a Tcl command for checking the correctness of a function.
+ *
+ *	This function is only needed because the C wrapper for the underlying
+ *	llvm::verifyFunction() call sucks.
+ *
+ * ------------------------------------------------------------------------
+ */
 
-// Done this way because the C wrapper for verifyFunction sucks
 int VerifyFunctionObjCmd(
     ClientData clientData,
     Tcl_Interp* interp,
@@ -43,8 +54,19 @@ int VerifyFunctionObjCmd(
     Tcl_SetObjResult(interp, NewObj(true));
     return TCL_OK;
 }
+
+/*
+ * ------------------------------------------------------------------------
+ *
+ * VerifyModule --
+ *	Implements a Tcl command for checking the correctness of a module.
+ *
+ *	This function is only needed because the C wrapper for the underlying
+ *	llvm::verifyModule() call sucks.
+ *
+ * ------------------------------------------------------------------------
+ */
 
-// Done this way because the C wrapper for verifyModule sucks
 int VerifyModuleObjCmd(
     ClientData clientData,
     Tcl_Interp* interp,
@@ -87,11 +109,14 @@ int VerifyModuleObjCmd(
      */
 
     TrimRight(Messages);
-    std::vector<tcl::value> result { NewObj(failedVerification), NewObj(Messages) };
+    std::vector<tcl::value> result {
+	NewObj(failedVerification),
+	NewObj(Messages)
+    };
     Tcl_SetObjResult(interp, NewObj(result));
     return TCL_OK;
 }
-
+
 /*
  * Local Variables:
  * mode: c++

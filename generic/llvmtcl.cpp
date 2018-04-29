@@ -36,7 +36,34 @@
 #include <llvm-c/Transforms/Vectorize.h>
 #include "llvmtcl.h"
 
+/*
+ * ------------------------------------------------------------------------
+ *
+ * Missing piece of LLVM C API.
+ *
+ * ------------------------------------------------------------------------
+ */
+
+static void
+LLVMAddCoroutinePassesToExtensionPoints(
+    LLVMPassManagerBuilderRef ref)
+{
+    auto Builder = reinterpret_cast<llvm::PassManagerBuilder*>(ref);
+
+    addCoroutinePassesToExtensionPoints(*Builder);
+}
+
+/*
+ * ------------------------------------------------------------------------
+ *
+ * Mapping functions, used to represent LLVM values within Tcl. Many are
+ * automatically generated.
+ *
+ * ------------------------------------------------------------------------
+ */
+
 TCL_DECLARE_MUTEX(idLock)
+
 std::string GetRefName(std::string prefix)
 {
     static volatile int LLVMRef_id = 0;
@@ -51,49 +78,6 @@ std::string GetRefName(std::string prefix)
 
 #include "generated/llvmtcl-gen-map.h"
 
-static int
-ParseCommandLineOptionsObjCmd(
-    ClientData clientData,
-    Tcl_Interp *interp,
-    int objc,
-    Tcl_Obj *const objv[])
-{
-    std::vector<const char*> argv(objc);
-    for (int i = 0; i < objc; ++i)
-	argv[i] = Tcl_GetString(objv[i]);
-
-    std::string s;
-    llvm::raw_string_ostream os(s);
-#ifdef API_5
-    bool result = llvm::cl::ParseCommandLineOptions(
-	    objc, argv.data(), "called from Tcl", &os);
-#else // !API_5
-    /*
-     * Errors are splurged straight to stderr. Marginally better than losing
-     * them entirely.
-     */
-    bool result = llvm::cl::ParseCommandLineOptions(
-	    objc, argv.data(), "called from Tcl");
-    if (!result)
-	os << "failed to parse command line options";
-#endif // API_5
-    os.flush();
-    if (!result) {
-	TrimRight(s);
-	SetStringResult(interp, s);
-	return TCL_ERROR;
-    }
-    return TCL_OK;
-}
-
-static void
-LLVMAddCoroutinePassesToExtensionPoints(
-    LLVMPassManagerBuilderRef ref)
-{
-    auto Builder = reinterpret_cast<llvm::PassManagerBuilder*>(ref);
-    addCoroutinePassesToExtensionPoints(*Builder);
-}
-
 static std::string
 LLVMDumpModuleTcl(
     LLVMModuleRef moduleRef)
@@ -251,6 +235,14 @@ GetEngineFromObj(
     return TCL_OK;
 }
 
+/*
+ * ------------------------------------------------------------------------
+ *
+ * Disposal functions
+ *
+ * ------------------------------------------------------------------------
+ */
+
 static void
 LLVMDisposeBuilderTcl(
     LLVMBuilderRef builderRef)
@@ -297,6 +289,59 @@ LLVMDeleteBasicBlockTcl(
     LLVMBasicBlockRef_refmap.erase(basicBlockRef);
 }
 
+/*
+ * ------------------------------------------------------------------------
+ *
+ * ParseCommandLineOptions --
+ *	Implements a Tcl command for parsing command line options.
+ *
+ * ------------------------------------------------------------------------
+ */
+
+static int
+ParseCommandLineOptions(
+    ClientData clientData,
+    Tcl_Interp *interp,
+    int objc,
+    Tcl_Obj *const objv[])
+{
+    std::vector<const char*> argv(objc);
+    for (int i = 0; i < objc; ++i)
+	argv[i] = Tcl_GetString(objv[i]);
+
+    std::string s;
+    llvm::raw_string_ostream os(s);
+#ifdef API_5
+    bool result = llvm::cl::ParseCommandLineOptions(
+	    objc, argv.data(), "called from Tcl", &os);
+#else // !API_5
+    /*
+     * Errors are splurged straight to stderr. Marginally better than losing
+     * them entirely.
+     */
+    bool result = llvm::cl::ParseCommandLineOptions(
+	    objc, argv.data(), "called from Tcl");
+    if (!result)
+	os << "failed to parse command line options";
+#endif // API_5
+    os.flush();
+    if (!result) {
+	TrimRight(s);
+	SetStringResult(interp, s);
+	return TCL_ERROR;
+    }
+    return TCL_OK;
+}
+
+/*
+ * ------------------------------------------------------------------------
+ *
+ * AddIncoming --
+ *	Implements a Tcl command for adding incoming arcs to a 'phi' node.
+ *
+ * ------------------------------------------------------------------------
+ */
+
 static int
 AddIncoming(
     ClientData clientData,
@@ -348,6 +393,15 @@ AddIncoming(
     return TCL_OK;
 }
 
+/*
+ * ------------------------------------------------------------------------
+ *
+ * BuildAggregateRet --
+ *	Implements a Tcl command for building an aggregate 'ret' instruction.
+ *
+ * ------------------------------------------------------------------------
+ */
+
 static int
 BuildAggregateRet(
     ClientData clientData,
@@ -384,6 +438,15 @@ BuildAggregateRet(
     return TCL_OK;
 }
 
+/*
+ * ------------------------------------------------------------------------
+ *
+ * BuildInvoke --
+ *	Implements a Tcl command for building an 'invoke' instruction.
+ *
+ * ------------------------------------------------------------------------
+ */
+
 static int
 BuildInvoke(
     ClientData clientData,
@@ -432,6 +495,16 @@ BuildInvoke(
     return TCL_OK;
 }
 
+/*
+ * ------------------------------------------------------------------------
+ *
+ * GetParamTypes --
+ *	Implements a Tcl command for getting the parameter types of a function
+ *	type.
+ *
+ * ------------------------------------------------------------------------
+ */
+
 static int
 GetParamTypes(
     ClientData clientData,
@@ -458,6 +531,15 @@ GetParamTypes(
     return TCL_OK;
 }
 
+/*
+ * ------------------------------------------------------------------------
+ *
+ * GetParams --
+ *	Implements a Tcl command for getting the parameters of a function.
+ *
+ * ------------------------------------------------------------------------
+ */
+
 static int
 GetParams(
     ClientData clientData,
@@ -488,6 +570,16 @@ GetParams(
     return TCL_OK;
 }
 
+/*
+ * ------------------------------------------------------------------------
+ *
+ * GetStructElementTypes --
+ *	Implements a Tcl command for getting the element types of a structure
+ *	type.
+ *
+ * ------------------------------------------------------------------------
+ */
+
 static int
 GetStructElementTypes(
     ClientData clientData,
@@ -512,6 +604,15 @@ GetStructElementTypes(
     return TCL_OK;
 }
 
+/*
+ * ------------------------------------------------------------------------
+ *
+ * GetBasicBlocks --
+ *	Implements a Tcl command for geting the basic blocks of a function.
+ *
+ * ------------------------------------------------------------------------
+ */
+
 static int
 GetBasicBlocks(
     ClientData clientData,
@@ -536,9 +637,16 @@ GetBasicBlocks(
     Tcl_SetObjResult(interp, rtl);
     return TCL_OK;
 }
-
-#include "generated/llvmtcl-gen.h"
 
+/*
+ * ------------------------------------------------------------------------
+ *
+ * NamedStructType --
+ *	Implements a Tcl command for creating named structure types.
+ *
+ * ------------------------------------------------------------------------
+ */
+
 static int
 NamedStructType(
     ClientData clientData,
@@ -575,6 +683,14 @@ NamedStructType(
     return TCL_OK;
 }
 
+/*
+ * ------------------------------------------------------------------------
+ *
+ * TokenType --
+ *	Implements a Tcl command that creates the 'token' type.
+ *
+ * ------------------------------------------------------------------------
+ */
 
 static int
 TokenType(
@@ -593,6 +709,15 @@ TokenType(
     Tcl_SetObjResult(interp, NewObj(tokenType));
     return TCL_OK;
 }
+
+/*
+ * ------------------------------------------------------------------------
+ *
+ * ConstNone --
+ *	Implements a Tcl command that creates the 'none' constant.
+ *
+ * ------------------------------------------------------------------------
+ */
 
 static int
 ConstNone(
@@ -612,6 +737,25 @@ ConstNone(
     return TCL_OK;
 }
 
+/*
+ * ------------------------------------------------------------------------
+ *
+ * Create the commands with automatically-build bindings. Lots of commands...
+ *
+ * ------------------------------------------------------------------------
+ */
+
+#include "generated/llvmtcl-gen.h"
+
+/*
+ * ------------------------------------------------------------------------
+ *
+ * StoreExternalStringInTclVar --
+ *	Writes a string defined by the system encoding into a Tcl variable.
+ *
+ * ------------------------------------------------------------------------
+ */
+
 static const char *
 StoreExternalStringInTclVar(
     Tcl_Interp *interp,
@@ -627,6 +771,15 @@ StoreExternalStringInTclVar(
     Tcl_DStringFree(&buf);
     return result;
 }
+
+/*
+ * ------------------------------------------------------------------------
+ *
+ * DefineCommand --
+ *	Convenience function that creates Tcl commands.
+ *
+ * ------------------------------------------------------------------------
+ */
 
 static inline void
 DefineCommand(
@@ -638,6 +791,15 @@ DefineCommand(
     // the interpreter is being deleted.
     Tcl_CreateObjCommand(interp, tclName, cName, nullptr, nullptr);
 }
+
+/*
+ * ------------------------------------------------------------------------
+ *
+ * Llvmtcl_Init, Llvmtcl_SafeInit --
+ *	Library entry points.
+ *
+ * ------------------------------------------------------------------------
+ */
 
 #define LLVMObjCmd(tclName, cName)  DefineCommand(interp, "::" tclName, cName)
 #define LLVMStrVar(varName, value) \
@@ -665,8 +827,7 @@ DLLEXPORT int Llvmtcl_Init(Tcl_Interp *interp)
 
 #include "generated/llvmtcl-gen-cmddef.h"
 
-    LLVMObjCmd("llvmtcl::ParseCommandLineOptions",
-	    ParseCommandLineOptionsObjCmd);
+    LLVMObjCmd("llvmtcl::ParseCommandLineOptions", ParseCommandLineOptions);
     LLVMObjCmd("llvmtcl::TokenType", TokenType);
     LLVMObjCmd("llvmtcl::ConstNone", ConstNone);
     LLVMObjCmd("llvmtcl::VerifyModule", VerifyModuleObjCmd);
@@ -694,8 +855,7 @@ DLLEXPORT int Llvmtcl_Init(Tcl_Interp *interp)
 	    CreateMCJITCompilerForModule);
     LLVMObjCmd("llvmtcl::GetHostTriple", GetHostTriple);
     LLVMObjCmd("llvmtcl::CopyModuleFromModule", CopyModuleFromModule);
-    LLVMObjCmd("llvmtcl::CreateModuleFromBitcode",
-	    CreateModuleFromBitcode);
+    LLVMObjCmd("llvmtcl::CreateModuleFromBitcode", CreateModuleFromBitcode);
     LLVMObjCmd("llvmtcl::GarbageCollectUnusedFunctionsInModule",
 	    GarbageCollectUnusedFunctionsInModule);
     LLVMObjCmd("llvmtcl::MakeTargetMachine", MakeTargetMachine);
@@ -738,7 +898,7 @@ DLLEXPORT int Llvmtcl_Init(Tcl_Interp *interp)
 
     return TCL_OK;
 }
-
+
 DLLEXPORT int Llvmtcl_SafeInit(Tcl_Interp *interp)
 {
     if (Tcl_InitStubs(interp, TCL_VERSION, 0) == NULL)
@@ -746,7 +906,7 @@ DLLEXPORT int Llvmtcl_SafeInit(Tcl_Interp *interp)
     SetStringResult(interp, "extension is completely unsafe");
     return TCL_ERROR;
 }
-
+
 } /* extern "C" */
 
 /*

@@ -4,7 +4,7 @@
 #include <llvm-c/Core.h>
 #include <llvm-c/BitReader.h>
 #include "version.h"
-
+
 /*
  * -------------------------------------------------------------------
  *
@@ -32,17 +32,35 @@ InstallStdio(
     engine->addGlobalMapping(llvm::cast<llvm::GlobalVariable>(
 	    mod->getOrInsertGlobal("stderr", void_ptr_type)), stderr);
 }
+
+/*
+ * ------------------------------------------------------------------------
+ *
+ * PatchRuntimeEnvironment --
+ *	UGLY HACK TIME. Replaces a part of the LLVM runtime that's not always
+ *	present.
+ *
+ * ------------------------------------------------------------------------
+ */
 
 static void
 PatchRuntimeEnvironment(
     LLVMExecutionEngineRef eeRef)
 {
-    // Replace a part of the LLVM runtime that's not always present
-
     auto engine = llvm::unwrap(eeRef);
     const void *powidf2 = (const void *) __powidf2;
     engine->addGlobalMapping("__powidf2", (uint64_t) powidf2);
 }
+
+/*
+ * ------------------------------------------------------------------------
+ *
+ * CreateMCJITCompilerForModule --
+ *	Implements a Tcl command for creating a machine-code-issuing compiler
+ *	for a module.
+ *
+ * ------------------------------------------------------------------------
+ */
 
 int
 CreateMCJITCompilerForModule(
@@ -89,6 +107,16 @@ CreateMCJITCompilerForModule(
     Tcl_SetObjResult(interp, SetLLVMExecutionEngineRefAsObj(interp, eeRef));
     return TCL_OK;
 }
+
+/*
+ * ------------------------------------------------------------------------
+ *
+ * GetHostTriple --
+ *	Implements a Tcl command for retrieving the description of the host
+ *	platform.
+ *
+ * ------------------------------------------------------------------------
+ */
 
 int
 GetHostTriple(
@@ -104,6 +132,15 @@ GetHostTriple(
     SetStringResult(interp, llvm::sys::getProcessTriple());
     return TCL_OK;
 }
+
+/*
+ * ------------------------------------------------------------------------
+ *
+ * CopyModuleFromModule --
+ *	Implements a Tcl command for duplicating a module.
+ *
+ * ------------------------------------------------------------------------
+ */
 
 int
 CopyModuleFromModule(
@@ -131,6 +168,15 @@ CopyModuleFromModule(
     Tcl_SetObjResult(interp, NewObj(tgtmod.release()));
     return TCL_OK;
 }
+
+/*
+ * ------------------------------------------------------------------------
+ *
+ * CreateModuleFromBitcode --
+ *	Implements a Tcl command for loading a module from a file.
+ *
+ * ------------------------------------------------------------------------
+ */
 
 int
 CreateModuleFromBitcode(
@@ -165,6 +211,16 @@ CreateModuleFromBitcode(
     free(msg);
     return TCL_ERROR;
 }
+
+/*
+ * ------------------------------------------------------------------------
+ *
+ * GarbageCollectUnusdFunctionsInModule --
+ *	Implements a Tcl command for removing functions without known uses or
+ *	external visibility.
+ *
+ * ------------------------------------------------------------------------
+ */
 
 int
 GarbageCollectUnusedFunctionsInModule(
@@ -217,6 +273,16 @@ GarbageCollectUnusedFunctionsInModule(
     } while (didDeletion);
     return TCL_OK;
 }
+
+/*
+ * ------------------------------------------------------------------------
+ *
+ * MakeTargetMachine --
+ *	Implements a Tcl command for creating a machine descriptor that
+ *	platform-specific code can be issued against.
+ *
+ * ------------------------------------------------------------------------
+ */
 
 int
 MakeTargetMachine(
@@ -253,6 +319,16 @@ MakeTargetMachine(
 	    nullptr, targetMachine));
     return TCL_OK;
 }
+
+/*
+ * ------------------------------------------------------------------------
+ *
+ * WriteModuleMachineCodetoFile --
+ *	Implements a Tcl command for converting a module to assembly code or
+ *	an object file.
+ *
+ * ------------------------------------------------------------------------
+ */
 
 int
 WriteModuleMachineCodeToFile(
@@ -312,7 +388,7 @@ WriteModuleMachineCodeToFile(
     LLVMDisposeTargetMachine(targetMachine);
     return TCL_OK;
 }
-
+
 /*
  * Local Variables:
  * mode: c++
