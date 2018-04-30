@@ -610,6 +610,54 @@ LLVMGetBasicBlocksObjCmd(
     return TCL_OK;
 }
 
+static int
+GetGlobals(
+    ClientData clientData,
+    Tcl_Interp *interp,
+    int objc,
+    Tcl_Obj *const objv[])
+{
+    if (objc != 2) {
+        Tcl_WrongNumArgs(interp, 1, objv, "Module");
+        return TCL_ERROR;
+    }
+
+    llvm::Module *mod;
+    if (GetModuleFromObj(interp, objv[1], mod) != TCL_OK)
+        return TCL_ERROR;
+
+    Tcl_Obj *rtl = Tcl_NewListObj(0, NULL);
+    for (auto &g : mod->globals())
+	Tcl_ListObjAppendElement(interp, rtl, NewObj(&g));
+
+    Tcl_SetObjResult(interp, rtl);
+    return TCL_OK;
+}
+
+static int
+GetFunctions(
+    ClientData clientData,
+    Tcl_Interp *interp,
+    int objc,
+    Tcl_Obj *const objv[])
+{
+    if (objc != 2) {
+        Tcl_WrongNumArgs(interp, 1, objv, "Module");
+        return TCL_ERROR;
+    }
+
+    llvm::Module *mod;
+    if (GetModuleFromObj(interp, objv[1], mod) != TCL_OK)
+        return TCL_ERROR;
+
+    Tcl_Obj *rtl = Tcl_NewListObj(0, NULL);
+    for (auto &f : mod->functions())
+	Tcl_ListObjAppendElement(interp, rtl, NewObj(&f));
+
+    Tcl_SetObjResult(interp, rtl);
+    return TCL_OK;
+}
+
 #include "generated/llvmtcl-gen.h"
 
 // Done this way because the C wrapper for verifyFunction sucks
@@ -1135,8 +1183,11 @@ DefineCommand(
     const char *tclName,
     Tcl_ObjCmdProc *cName)
 {
-    // Theoretically, this can blow up. It only actually does this if
-    // the interpreter is being deleted.
+    /*
+     * Theoretically, this can blow up. It only actually does this if
+     * the interpreter is being deleted.
+     */
+
     Tcl_CreateObjCommand(interp, tclName, cName, nullptr, nullptr);
 }
 
@@ -1186,6 +1237,8 @@ DLLEXPORT int Llvmtcl_Init(Tcl_Interp *interp)
     LLVMObjCmd("llvmtcl::GetStructElementTypes",
 	    LLVMGetStructElementTypesObjCmd);
     LLVMObjCmd("llvmtcl::GetBasicBlocks", LLVMGetBasicBlocksObjCmd);
+    LLVMObjCmd("llvmtcl::GetGlobals", GetGlobals);
+    LLVMObjCmd("llvmtcl::GetFunctions", GetFunctions);
     LLVMObjCmd("llvmtcl::CallInitialisePackageFunction",
 	    LLVMCallInitialisePackageFunction);
     LLVMObjCmd("llvmtcl::GetIntrinsicDefinition",
