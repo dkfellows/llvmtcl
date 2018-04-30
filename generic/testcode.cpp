@@ -71,7 +71,7 @@ addFunction(
 /*
  * ----------------------------------------------------------------------
  *
- * LLVMAddLLVMTclCommandsObjCmd --
+ * AddLLVMTclTestCommands --
  *
  *	Tcl Command Implementation: Maps three functions into the given
  *	execution environment and module.
@@ -80,7 +80,7 @@ addFunction(
  */
 
 MODULE_SCOPE int
-LLVMAddLLVMTclCommandsObjCmd(
+AddLLVMTclTestCommands(
     ClientData clientData,
     Tcl_Interp *interp,
     int objc,
