@@ -652,7 +652,7 @@ GetBasicBlocks(
     Tcl_SetObjResult(interp, rtl);
     return TCL_OK;
 }
-
+
 /*
  * ------------------------------------------------------------------------
  *
@@ -685,7 +685,7 @@ GetGlobals(
     Tcl_SetObjResult(interp, rtl);
     return TCL_OK;
 }
-
+
 /*
  * ------------------------------------------------------------------------
  *
@@ -718,7 +718,7 @@ GetFunctions(
     Tcl_SetObjResult(interp, rtl);
     return TCL_OK;
 }
-
+
 /*
  * ------------------------------------------------------------------------
  *
