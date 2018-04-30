@@ -740,19 +740,19 @@ NamedStructTypeObjCmd(
     int objc,
     Tcl_Obj *const objv[])
 {
-    if (objc != 4) {
-        Tcl_WrongNumArgs(interp, 1, objv, "Name ElementTypes Packed");
+    if (objc < 3 || objc > 4) {
+        Tcl_WrongNumArgs(interp, 1, objv, "Name ElementTypes ?Packed?");
         return TCL_ERROR;
     }
 
     std::string name = Tcl_GetString(objv[1]);
-    int numTypes = 0;
+    unsigned numTypes = 0;
     LLVMTypeRef *types = 0;
     if (GetListOfLLVMTypeRefFromObj(interp, objv[2], types,
 	    numTypes) != TCL_OK)
         return TCL_ERROR;
     int packed = 0;
-    if (Tcl_GetIntFromObj(interp, objv[3], &packed) != TCL_OK)
+    if (objc > 3 && Tcl_GetBooleanFromObj(interp, objv[3], &packed) != TCL_OK)
         return TCL_ERROR;
 
     llvm::Type *rt;
@@ -760,9 +760,8 @@ NamedStructTypeObjCmd(
 	rt = llvm::StructType::create(*llvm::unwrap(LLVMGetGlobalContext()),
 		name);
     } else {
-	llvm::ArrayRef<llvm::Type*> elements(
-		llvm::unwrap(types), unsigned(numTypes));
-	rt = llvm::StructType::create(elements, name, packed);
+	llvm::ArrayRef<llvm::Type*> elements(llvm::unwrap(types), numTypes);
+	rt = llvm::StructType::create(elements, name, bool(packed));
     }
 
     Tcl_SetObjResult(interp, NewObj(rt));

@@ -200,14 +200,13 @@ proc gen_api_call {cf of l} {
 		"LLVMGenericValueRef *" -
 		"LLVMValueRef *" -
 		"LLVMTypeRef *" {
-		    if {[lindex $fargsl $n] ne "unsigned"} {
-			error "Unknown type '$fargtype' in '$l'"
+		    if {[lindex $fargsl [expr {$n * 2}]] ne "unsigned"} {
+			error "Unknown type '$fargtype' in '$l': $n, $fargsl"
 		    }
-		    puts $cf "    int iarg[expr {$n+1}] = 0;"
+		    puts $cf "    unsigned arg[expr {$n+1}] = 0;"
 		    puts $cf "    $fargtype arg$n = nullptr;"
-		    puts $cf "    if (GetListOf[string trim $fargtype { *}]FromObj(interp, objv\[$on\], arg$n, iarg[expr {$n+1}]) != TCL_OK)"
+		    puts $cf "    if (GetListOf[string trim $fargtype { *}]FromObj(interp, objv\[$on\], arg$n, arg[expr {$n+1}]) != TCL_OK)"
 		    puts $cf "        return TCL_ERROR;"
-		    puts $cf "    unsigned arg[expr {$n+1}] = (unsigned)iarg[expr {$n+1}];"
 		    set skip_next 1
 		    lappend delete_args arg$n
 		}
@@ -376,20 +375,22 @@ int Get${tp}FromObj(Tcl_Interp* interp, Tcl_Obj* obj, $tp& ref) {
     ref = ${tp}_map[refName];
     return TCL_OK;
 }
-int GetListOf${tp}FromObj(Tcl_Interp* interp, Tcl_Obj* obj, $tp*& refs, int& count) {
+int GetListOf${tp}FromObj(Tcl_Interp* interp, Tcl_Obj* obj, $tp*& refs, unsigned& count) {
     refs = 0;
     count = 0;
     Tcl_Obj** objs = 0;
-    if (Tcl_ListObjGetElements(interp, obj, &count, &objs) != TCL_OK) {
+    int length;
+    if (Tcl_ListObjGetElements(interp, obj, &length, &objs) != TCL_OK) {
         std::ostringstream os;
         os << "expected list of types but got \"" << Tcl_GetStringFromObj(obj, 0) << "\"";
         Tcl_SetObjResult(interp, Tcl_NewStringObj(os.str().c_str(), -1));
         return TCL_ERROR;
     }
+    count = unsigned(length);
     if (count == 0)
         return TCL_OK;
     refs = new $tp[count];
-    for(int i = 0; i < count; i++) {
+    for(unsigned i = 0; i < count; i++) {
         if (Get${tp}FromObj(interp, objs[i], refs[i])) {
             delete [] refs;
             return TCL_ERROR;
