@@ -11,7 +11,7 @@ find_package(TclSh REQUIRED)
 find_package(TclStub REQUIRED)
 
 set (PACKAGE_NAME "llvmtcl")
-set (PACKAGE_VERSION "3.9.0")
+set (PACKAGE_VERSION "3.9.1")
 set (PKG_LIB_FILE "llvmtcl.dll")
 
 
