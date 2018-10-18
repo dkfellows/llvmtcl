@@ -10,6 +10,7 @@
  */
 
 #include "llvmtcl.h"
+#include "version.h"
 #include <tcl.h>
 #include <llvm/IR/Intrinsics.h>
 #include <llvm-c/Core.h>
@@ -31,7 +32,11 @@
 
 static const char *const intrinsicNames[] = {
 #define GET_INTRINSIC_NAME_TABLE
+#ifdef API_7
+#include <llvm/IR/IntrinsicImpl.inc>
+#else // !API_7
 #include <llvm/IR/Intrinsics.gen>
+#endif // API_7
 #undef GET_INTRINSIC_NAME_TABLE
 };
 

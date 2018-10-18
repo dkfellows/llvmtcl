@@ -445,7 +445,6 @@ void LLVMAddIPSCCPPass(LLVMPassManagerRef PM);
 void LLVMAddInternalizePass(LLVMPassManagerRef, unsigned AllButMain);
 void LLVMAddStripDeadPrototypesPass(LLVMPassManagerRef PM);
 void LLVMAddStripSymbolsPass(LLVMPassManagerRef PM);
-void LLVMAddBBVectorizePass(LLVMPassManagerRef);
 void LLVMAddLoopVectorizePass(LLVMPassManagerRef);
 
 std::string LLVMGetDataLayout(LLVMModuleRef M);

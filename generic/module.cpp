@@ -168,7 +168,11 @@ CopyModuleFromModule(
     llvm::Module *srcmod;
     if (GetModuleFromObj(interp, objv[1], srcmod) != TCL_OK)
         return TCL_ERROR;
+#ifdef API_7
+    auto tgtmod = llvm::CloneModule(*srcmod);
+#else // !API_7
     auto tgtmod = llvm::CloneModule(srcmod);
+#endif // API_7
     if (objc > 2) {
 	std::string tgtid = Tcl_GetString(objv[2]);
 	tgtmod->setModuleIdentifier(tgtid);
