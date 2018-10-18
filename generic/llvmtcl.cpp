@@ -50,6 +50,9 @@
 #include <llvm-c/Transforms/Scalar.h>
 #include <llvm-c/Transforms/Vectorize.h>
 #include "llvmtcl.h"
+#ifdef API_7
+#include <llvm-c/Transforms/Utils.h>
+#endif // API_7
 
 /*
  * ------------------------------------------------------------------------
