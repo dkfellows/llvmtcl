@@ -157,6 +157,22 @@ NewObj(const std::vector<tcl::value> &vec)
     return Tcl_NewListObj(vec.size(), vec.data());
 }
 
+static inline tcl::value
+NewObj(Tcl_Interp *interp, llvm::Module *module)
+{
+    extern Tcl_Obj *SetLLVMModuleRefAsObj(
+	    Tcl_Interp *interp, LLVMModuleRef module);
+    return SetLLVMModuleRefAsObj(interp, llvm::wrap(module));
+}
+
+static inline tcl::value
+NewObj(Tcl_Interp *interp, LLVMModuleRef module)
+{
+    extern Tcl_Obj *SetLLVMModuleRefAsObj(
+	    Tcl_Interp *interp, LLVMModuleRef module);
+    return SetLLVMModuleRefAsObj(interp, llvm::wrap(llvm::unwrap(module)));
+}
+
 template<typename T>//T subclass of llvm::Type
 static inline int
 GetTypeFromObj(

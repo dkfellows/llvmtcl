@@ -181,7 +181,7 @@ CopyModuleFromModule(
 	std::string tgtfile = Tcl_GetString(objv[3]);
 	tgtmod->setSourceFileName(tgtfile);
     }
-    Tcl_SetObjResult(interp, NewObj(tgtmod.release()));
+    Tcl_SetObjResult(interp, NewObj(interp, tgtmod.release()));
     return TCL_OK;
 }
 
@@ -219,7 +219,7 @@ CreateModuleFromBitcode(
     if (failed)
 	goto error;
 
-    Tcl_SetObjResult(interp, NewObj(module));
+    Tcl_SetObjResult(interp, NewObj(interp, module));
     return TCL_OK;
 
   error:
