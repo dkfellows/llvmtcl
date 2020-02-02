@@ -11,5 +11,6 @@ pkgIndex.tcl
 Makefile
 /generic/generated/
 *.ll
+*.bc
 /.cproject
 /.settings/
