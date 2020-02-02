@@ -10,6 +10,7 @@
  */
 
 #include "llvmtcl.h"
+#include "version.h"
 #include <tcl.h>
 #include <llvm/IR/Intrinsics.h>
 #include <llvm-c/Core.h>
@@ -31,7 +32,11 @@
 
 static const char *const intrinsicNames[] = {
 #define GET_INTRINSIC_NAME_TABLE
+#ifdef API_7
+#include <llvm/IR/IntrinsicImpl.inc>
+#else // !API_7
 #include <llvm/IR/Intrinsics.gen>
+#endif // API_7
 #undef GET_INTRINSIC_NAME_TABLE
 };
 
@@ -146,6 +151,11 @@ MakeIntrinsicIsOverloadedError(
 	    case Intrinsic::IITDescriptor::AK_AnyPointer:
 		Tcl_AppendResult(interp, sep, "pointer", NULL);
 		break;
+#ifdef API_9
+	    case Intrinsic::IITDescriptor::AK_MatchType:
+		Tcl_AppendResult(interp, sep, "matchedType", NULL);
+		break;
+#endif // API_9
 	    }
 	    sep = ", ";
 	}
@@ -236,6 +246,10 @@ GetIntrinsicDefinition(
 	 */
 
 	switch (kind) {
+#ifdef API_9
+	case Intrinsic::IITDescriptor::AK_MatchType:
+	    // Unsafe, but I don't know what else to do
+#endif // API_9
 	case Intrinsic::IITDescriptor::AK_Any:
 	    // 0 means any type is acceptable
 	    break;

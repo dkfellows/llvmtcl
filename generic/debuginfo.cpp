@@ -171,13 +171,18 @@ CreateDebugBuilder(
     int objc,
     Tcl_Obj *const objv[])
 {
-    if (objc != 2) {
-	Tcl_WrongNumArgs(interp, 1, objv, "module");
+    if (objc != 2 && objc != 3) {
+	Tcl_WrongNumArgs(interp, 1, objv, "module ?addGlobalMeta?");
 	return TCL_ERROR;
     }
 
     Module *module;
     if (GetModuleFromObj(interp, objv[1], module) != TCL_OK)
+	return TCL_ERROR;
+
+    int addGlobalMeta = true;
+    if (objc == 3 &&
+	    Tcl_GetBooleanFromObj(interp, objv[2], &addGlobalMeta) == TCL_ERROR)
 	return TCL_ERROR;
 
     /*
@@ -187,10 +192,12 @@ CreateDebugBuilder(
      * Where is this documented? In a presentation of all places...
      * https://llvm.org/devmtg/2014-10/Slides/Christopher-DebugInfoTutorial.pdf
      */
-    module->addModuleFlag(Module::Warning, "Debug Info Version",
-			  DEBUG_METADATA_VERSION);
-    if (Triple(sys::getProcessTriple()).isOSDarwin())
-	module->addModuleFlag(Module::Warning, "Dwarf Version", 2);
+    if (addGlobalMeta) {
+	module->addModuleFlag(Module::Warning, "Debug Info Version",
+		DEBUG_METADATA_VERSION);
+	if (Triple(sys::getProcessTriple()).isOSDarwin())
+	    module->addModuleFlag(Module::Warning, "Dwarf Version", 2);
+    }
 
     Tcl_SetObjResult(interp, NewObj(new DIBuilder(*module)));
     return TCL_OK;
@@ -822,10 +829,20 @@ DefineFunction(
     DISubroutineType *type;
     if (GetMetadataFromObj(interp, objv[7], "subroutine type", type) != TCL_OK)
 	return TCL_ERROR;
+
+#ifdef API_8
+    DISubprogram::DISPFlags flags =
+	    DISubprogram::SPFlagLocalToUnit | DISubprogram::SPFlagDefinition |
+	    DISubprogram::SPFlagOptimized;
+
+    auto val = builder->createFunction(scope, name, linkName, file, line,
+	    type, line, DINode::FlagZero, flags);
+#else
     bool isOpt = true, isLocal = true, isDef = true;
 
     auto val = builder->createFunction(scope, name, linkName, file, line,
 	    type, isLocal, isDef, line, DINode::FlagZero, isOpt);
+#endif // API_8
 
     Tcl_SetObjResult(interp, NewMetadataObj(val, "Function"));
     return TCL_OK;

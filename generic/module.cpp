@@ -168,7 +168,11 @@ CopyModuleFromModule(
     llvm::Module *srcmod;
     if (GetModuleFromObj(interp, objv[1], srcmod) != TCL_OK)
         return TCL_ERROR;
+#ifdef API_7
+    auto tgtmod = llvm::CloneModule(*srcmod);
+#else // !API_7
     auto tgtmod = llvm::CloneModule(srcmod);
+#endif // API_7
     if (objc > 2) {
 	std::string tgtid = Tcl_GetString(objv[2]);
 	tgtmod->setModuleIdentifier(tgtid);
@@ -177,7 +181,7 @@ CopyModuleFromModule(
 	std::string tgtfile = Tcl_GetString(objv[3]);
 	tgtmod->setSourceFileName(tgtfile);
     }
-    Tcl_SetObjResult(interp, NewObj(tgtmod.release()));
+    Tcl_SetObjResult(interp, NewObj(interp, tgtmod.release()));
     return TCL_OK;
 }
 
@@ -215,7 +219,7 @@ CreateModuleFromBitcode(
     if (failed)
 	goto error;
 
-    Tcl_SetObjResult(interp, NewObj(module));
+    Tcl_SetObjResult(interp, NewObj(interp, module));
     return TCL_OK;
 
   error:

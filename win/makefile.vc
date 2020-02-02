@@ -173,7 +173,7 @@ PROJECT = llvmtcl
 
 !if [echo REM = This file is generated from Makefile.vc > versions.vc]
 !endif
-# get project version from row "AC_INIT([llvmtcl], [3.9.0])"
+# get project version from row "AC_INIT([llvmtcl], [3.9.2])"
 !if [echo DOTVERSION = \>> versions.vc] \
    && [nmakehlp -V ..\configure.in llvmtcl >> versions.vc]
 !endif
