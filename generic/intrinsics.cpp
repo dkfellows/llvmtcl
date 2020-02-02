@@ -151,6 +151,11 @@ MakeIntrinsicIsOverloadedError(
 	    case Intrinsic::IITDescriptor::AK_AnyPointer:
 		Tcl_AppendResult(interp, sep, "pointer", NULL);
 		break;
+#ifdef API_9
+	    case Intrinsic::IITDescriptor::AK_MatchType:
+		Tcl_AppendResult(interp, sep, "matchedType", NULL);
+		break;
+#endif // API_9
 	    }
 	    sep = ", ";
 	}
@@ -241,6 +246,10 @@ GetIntrinsicDefinition(
 	 */
 
 	switch (kind) {
+#ifdef API_9
+	case Intrinsic::IITDescriptor::AK_MatchType:
+	    // Unsafe, but I don't know what else to do
+#endif // API_9
 	case Intrinsic::IITDescriptor::AK_Any:
 	    // 0 means any type is acceptable
 	    break;

@@ -1,9 +1,10 @@
 #include "tcl.h"
 #include "tclTomMath.h"
-#include "llvm/IR/LLVMContext.h"
-#include "llvm/ExecutionEngine/ExecutionEngine.h"
-#include "llvm-c/Core.h"
+#include <llvm/IR/LLVMContext.h>
+#include <llvm/ExecutionEngine/ExecutionEngine.h>
+#include <llvm-c/Core.h>
 #include "llvmtcl.h"
+#include "version.h"
 
 using namespace llvm;
 
@@ -18,7 +19,7 @@ using namespace llvm;
  */
 
 extern "C" {
-void llvm_test() {}
+void llvm_test(void) {}
 
 Tcl_Obj *
 llvm_add(
@@ -63,9 +64,13 @@ addFunction(
     FunctionType *type,
     void *implementation)
 {
-    ee->addGlobalMapping(cast<Function>(
-	    mod->getOrInsertFunction(name, type)),
-	    implementation);
+    auto val = mod->getOrInsertFunction(name, type);
+#ifdef API_9
+    auto fun = cast<Function>(val.getCallee());
+#else // !API_9
+    auto fun = cast<Function>(val);
+#endif // API_9
+    ee->addGlobalMapping(fun, implementation);
 }
 
 /*
