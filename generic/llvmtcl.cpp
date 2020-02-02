@@ -57,23 +57,6 @@
 /*
  * ------------------------------------------------------------------------
  *
- * Missing piece of LLVM C API.
- *
- * ------------------------------------------------------------------------
- */
-
-static void
-LLVMAddCoroutinePassesToExtensionPoints(
-    LLVMPassManagerBuilderRef ref)
-{
-    auto Builder = reinterpret_cast<llvm::PassManagerBuilder*>(ref);
-
-    addCoroutinePassesToExtensionPoints(*Builder);
-}
-
-/*
- * ------------------------------------------------------------------------
- *
  * Mapping functions, used to represent LLVM values within Tcl. Many are
  * automatically generated.
  *
@@ -305,6 +288,273 @@ LLVMDeleteBasicBlockTcl(
     LLVMDeleteBasicBlock(basicBlockRef);
     LLVMBasicBlockRef_map.erase( LLVMBasicBlockRef_refmap[basicBlockRef]);
     LLVMBasicBlockRef_refmap.erase(basicBlockRef);
+}
+
+/*
+ * ------------------------------------------------------------------------
+ *
+ * Adding passes, including those not exposed via LLVM C API.
+ *
+ * ------------------------------------------------------------------------
+ */
+
+static void
+LLVMAddCoroutinePassesToExtensionPoints(
+    LLVMPassManagerBuilderRef ref)
+{
+    auto Builder = reinterpret_cast<llvm::PassManagerBuilder*>(ref);
+
+    addCoroutinePassesToExtensionPoints(*Builder);
+}
+
+static int
+LLVMTclAddPass(
+    ClientData clientData,
+    Tcl_Interp *interp,
+    int objc,
+    Tcl_Obj *const objv[])
+{
+    const char *passes[] = {
+	"aggressivedce", "alwaysinliner", "argumentpromotion",
+	"basicaliasanalysis", "cfgsimplification", "constantmerge",
+	"constantpropagation", "correlatedvaluepropagation",
+	"deadargelimination", "deadstoreelimination", "demotememorytoregister",
+	"earlycse", "functionattrs", "functioninlining", "globaldce",
+	"globaloptimizer", "gvn", "indvarsimplify", "instructioncombining",
+	"internalize", "ipconstantpropagation", "ipsccp", "jumpthreading",
+	"licm", "loopdeletion", "loopidiom", "looprotate", "loopunroll",
+	"loopunswitch", "loopvectorize", "lowerexpectintrinsic", "memcpyopt",
+	"promotememorytoregister", "pruneeh", "reassociate",
+	"scalarreplaggregates", "scalarreplaggregatesssa",
+	"scalarreplaggregateswiththreshold"
+	"sccp", "simplifylibcalls", "stripdeadprototypes", "stripsymbols",
+	"tailcallelimination", "typebasedaliasanalysis", "verifier",
+	nullptr
+    };
+    enum Passes {
+	AGGRESSIVE_DCE, ALWAYS_INLINER, ARG_PROMOTION, BASIC_ALIAS_ANALYSIS,
+	CFG_SIMPLIFY, CONST_MERGE, CONST_PROP, CORRELATED_VALUE_PROP,
+	DEAD_ARG_ELIM, DEAD_STORE_ELIM, DEMOTE_MEMORY, EARLY_CSE, FUN_ATTRS,
+	FUN_INLINE, GLOBAL_DCE, GLOBAL_OPT, GVN, IND_VAR_SIMLIFY,
+	INST_COMBINE, INTERNALIZE, IP_CONST_PROP, IP_SCCP, JUMP_THREAD, LICM,
+	LOOP_DEL, LOOP_IDIOM, LOOP_ROT, LOOP_UNROLL, LOOP_UNSWITCH, LOOP_VECT,
+	LOWER_EXPECT, MEMCPY_OPT, PROMOTE_MEMORY, PRUNE_EH, REASSOCIATE,
+	SCALAR_REPL_AGGR, SCALAR_REPL_AGGR_SSA, SCALAR_REPL_AGGR_THRESHOLD,
+	SCCP, SIMPLIFY_LIB_CALLS, STRIP_DEAD_PROTO, STRIP_SYM, TAILCALL_ELIM,
+	TBAA, VERIFIER
+    };
+
+    if (objc != 3 && objc != 4) {
+	Tcl_WrongNumArgs(interp, 1, objv, "passName PassManager ?arg?");
+	return TCL_ERROR;
+    }
+
+    int idx = -1;
+    if (Tcl_GetIndexFromObj(interp, objv[1], passes, "pass", 0, &idx))
+	return TCL_ERROR;
+    LLVMPassManagerRef PM;
+    if (GetLLVMPassManagerRefFromObj(interp, objv[2], PM))
+	return TCL_ERROR;
+
+    switch ((enum Passes) idx) {
+    case AGGRESSIVE_DCE:
+	if (objc != 3) goto bad3arg;
+	LLVMAddAggressiveDCEPass(PM);
+	break;
+    case ALWAYS_INLINER:
+	if (objc != 3) goto bad3arg;
+	LLVMAddAlwaysInlinerPass(PM);
+	break;
+    case ARG_PROMOTION:
+	if (objc != 3) goto bad3arg;
+	LLVMAddArgumentPromotionPass(PM);
+	break;
+    case BASIC_ALIAS_ANALYSIS:
+	if (objc != 3) goto bad3arg;
+	LLVMAddBasicAliasAnalysisPass(PM);
+	break;
+    case CFG_SIMPLIFY:
+	if (objc != 3) goto bad3arg;
+	LLVMAddCFGSimplificationPass(PM);
+	break;
+    case CONST_MERGE:
+	if (objc != 3) goto bad3arg;
+	LLVMAddConstantMergePass(PM);
+	break;
+    case CONST_PROP:
+	if (objc != 3) goto bad3arg;
+	LLVMAddConstantPropagationPass(PM);
+	break;
+    case CORRELATED_VALUE_PROP:
+	if (objc != 3) goto bad3arg;
+	LLVMAddCorrelatedValuePropagationPass(PM);
+	break;
+    case DEAD_ARG_ELIM:
+	if (objc != 3) goto bad3arg;
+	LLVMAddDeadArgEliminationPass(PM);
+	break;
+    case DEAD_STORE_ELIM:
+	if (objc != 3) goto bad3arg;
+	LLVMAddDeadStoreEliminationPass(PM);
+	break;
+    case DEMOTE_MEMORY:
+	if (objc != 3) goto bad3arg;
+	LLVMAddDemoteMemoryToRegisterPass(PM);
+	break;
+    case EARLY_CSE:
+	if (objc != 3) goto bad3arg;
+	LLVMAddEarlyCSEPass(PM);
+	break;
+    case FUN_ATTRS:
+	if (objc != 3) goto bad3arg;
+	LLVMAddFunctionAttrsPass(PM);
+	break;
+    case FUN_INLINE:
+	if (objc != 3) goto bad3arg;
+	LLVMAddFunctionInliningPass(PM);
+	break;
+    case GLOBAL_DCE:
+	if (objc != 3) goto bad3arg;
+	LLVMAddGlobalDCEPass(PM);
+	break;
+    case GLOBAL_OPT:
+	if (objc != 3) goto bad3arg;
+	LLVMAddGlobalOptimizerPass(PM);
+	break;
+    case GVN:
+	if (objc != 3) goto bad3arg;
+	LLVMAddGVNPass(PM);
+	break;
+    case IND_VAR_SIMLIFY:
+	if (objc != 3) goto bad3arg;
+	LLVMAddIndVarSimplifyPass(PM);
+	break;
+    case INST_COMBINE:
+	if (objc != 3) goto bad3arg;
+	LLVMAddInstructionCombiningPass(PM);
+	break;
+    case INTERNALIZE: {
+	if (objc != 4) {
+	    Tcl_WrongNumArgs(interp, 3, objv, "allButMain");
+	    return TCL_ERROR;
+	}
+	int flag;
+	if (Tcl_GetBooleanFromObj(interp, objv[3], &flag)) return TCL_ERROR;
+	LLVMAddInternalizePass(PM, (unsigned) flag);
+	break;
+    }
+    case IP_CONST_PROP:
+	if (objc != 3) goto bad3arg;
+	LLVMAddIPConstantPropagationPass(PM);
+	break;
+    case IP_SCCP:
+	if (objc != 3) goto bad3arg;
+	LLVMAddIPSCCPPass(PM);
+	break;
+    case JUMP_THREAD:
+	if (objc != 3) goto bad3arg;
+	LLVMAddJumpThreadingPass(PM);
+	break;
+    case LICM:
+	if (objc != 3) goto bad3arg;
+	LLVMAddLICMPass(PM);
+	break;
+    case LOOP_DEL:
+	if (objc != 3) goto bad3arg;
+	LLVMAddLoopDeletionPass(PM);
+	break;
+    case LOOP_IDIOM:
+	if (objc != 3) goto bad3arg;
+	LLVMAddLoopIdiomPass(PM);
+	break;
+    case LOOP_ROT:
+	if (objc != 3) goto bad3arg;
+	LLVMAddLoopRotatePass(PM);
+	break;
+    case LOOP_UNROLL:
+	if (objc != 3) goto bad3arg;
+	LLVMAddLoopUnrollPass(PM);
+	break;
+    case LOOP_UNSWITCH:
+	if (objc != 3) goto bad3arg;
+	LLVMAddLoopUnswitchPass(PM);
+	break;
+    case LOOP_VECT:
+	if (objc != 3) goto bad3arg;
+	LLVMAddLoopVectorizePass(PM);
+	break;
+    case LOWER_EXPECT:
+	if (objc != 3) goto bad3arg;
+	LLVMAddLowerExpectIntrinsicPass(PM);
+	break;
+    case MEMCPY_OPT:
+	if (objc != 3) goto bad3arg;
+	LLVMAddMemCpyOptPass(PM);
+	break;
+    case PROMOTE_MEMORY:
+	if (objc != 3) goto bad3arg;
+	LLVMAddPromoteMemoryToRegisterPass(PM);
+	break;
+    case PRUNE_EH:
+	if (objc != 3) goto bad3arg;
+	LLVMAddPruneEHPass(PM);
+	break;
+    case REASSOCIATE:
+	if (objc != 3) goto bad3arg;
+	LLVMAddReassociatePass(PM);
+	break;
+    case SCALAR_REPL_AGGR:
+	if (objc != 3) goto bad3arg;
+	LLVMAddScalarReplAggregatesPass(PM);
+	break;
+    case SCALAR_REPL_AGGR_SSA:
+	if (objc != 3) goto bad3arg;
+	LLVMAddScalarReplAggregatesPassSSA(PM);
+	break;
+    case SCALAR_REPL_AGGR_THRESHOLD: {
+	if (objc != 4) {
+	    Tcl_WrongNumArgs(interp, 3, objv, "threshold");
+	    return TCL_ERROR;
+	}
+	int threshold;
+	if (Tcl_GetIntFromObj(interp, objv[3], &threshold)) return TCL_ERROR;
+	LLVMAddScalarReplAggregatesPassWithThreshold(PM, threshold);
+	break;
+    }
+    case SCCP:
+	if (objc != 3) goto bad3arg;
+	LLVMAddSCCPPass(PM);
+	break;
+    case SIMPLIFY_LIB_CALLS:
+	if (objc != 3) goto bad3arg;
+	LLVMAddSimplifyLibCallsPass(PM);
+	break;
+    case STRIP_DEAD_PROTO:
+	if (objc != 3) goto bad3arg;
+	LLVMAddStripDeadPrototypesPass(PM);
+	break;
+    case STRIP_SYM:
+	if (objc != 3) goto bad3arg;
+	LLVMAddStripSymbolsPass(PM);
+	break;
+    case TAILCALL_ELIM:
+	if (objc != 3) goto bad3arg;
+	LLVMAddTailCallEliminationPass(PM);
+	break;
+    case TBAA:
+	if (objc != 3) goto bad3arg;
+	LLVMAddTypeBasedAliasAnalysisPass(PM);
+	break;
+    case VERIFIER:
+	if (objc != 3) goto bad3arg;
+	LLVMAddVerifierPass(PM);
+	break;
+    }
+
+    return TCL_OK;
+  bad3arg:
+    Tcl_WrongNumArgs(interp, 3, objv, nullptr);
+    return TCL_ERROR;
 }
 
 /*
@@ -659,6 +909,72 @@ GetBasicBlocks(
 /*
  * ------------------------------------------------------------------------
  *
+ * GetGlobals --
+ *	Implements a Tcl command for getting the globals of a module.
+ *
+ * ------------------------------------------------------------------------
+ */
+
+static int
+GetGlobals(
+    ClientData clientData,
+    Tcl_Interp *interp,
+    int objc,
+    Tcl_Obj *const objv[])
+{
+    if (objc != 2) {
+        Tcl_WrongNumArgs(interp, 1, objv, "Module");
+        return TCL_ERROR;
+    }
+
+    llvm::Module *mod;
+    if (GetModuleFromObj(interp, objv[1], mod) != TCL_OK)
+        return TCL_ERROR;
+
+    Tcl_Obj *rtl = Tcl_NewListObj(0, NULL);
+    for (auto &g : mod->globals())
+	Tcl_ListObjAppendElement(interp, rtl, NewObj(&g));
+
+    Tcl_SetObjResult(interp, rtl);
+    return TCL_OK;
+}
+
+/*
+ * ------------------------------------------------------------------------
+ *
+ * GetFunctions --
+ *	Implements a Tcl command for getting the functions of a module.
+ *
+ * ------------------------------------------------------------------------
+ */
+
+static int
+GetFunctions(
+    ClientData clientData,
+    Tcl_Interp *interp,
+    int objc,
+    Tcl_Obj *const objv[])
+{
+    if (objc != 2) {
+        Tcl_WrongNumArgs(interp, 1, objv, "Module");
+        return TCL_ERROR;
+    }
+
+    llvm::Module *mod;
+    if (GetModuleFromObj(interp, objv[1], mod) != TCL_OK)
+        return TCL_ERROR;
+
+    Tcl_Obj *rtl = Tcl_NewListObj(0, NULL);
+    for (auto &f : mod->functions())
+	Tcl_ListObjAppendElement(interp, rtl, NewObj(&f));
+
+    Tcl_SetObjResult(interp, rtl);
+    return TCL_OK;
+}
+
+/*
+ * ------------------------------------------------------------------------
+ *
  * NamedStructType --
  *	Implements a Tcl command for creating named structure types.
  *
@@ -672,19 +988,19 @@ NamedStructType(
     int objc,
     Tcl_Obj *const objv[])
 {
-    if (objc != 4) {
-        Tcl_WrongNumArgs(interp, 1, objv, "Name ElementTypes Packed");
+    if (objc < 3 || objc > 4) {
+        Tcl_WrongNumArgs(interp, 1, objv, "Name ElementTypes ?Packed?");
         return TCL_ERROR;
     }
 
     std::string name = Tcl_GetString(objv[1]);
-    int numTypes = 0;
+    unsigned numTypes = 0;
     LLVMTypeRef *types = 0;
     if (GetListOfLLVMTypeRefFromObj(interp, objv[2], types,
 	    numTypes) != TCL_OK)
         return TCL_ERROR;
     int packed = 0;
-    if (Tcl_GetIntFromObj(interp, objv[3], &packed) != TCL_OK)
+    if (objc > 3 && Tcl_GetBooleanFromObj(interp, objv[3], &packed) != TCL_OK)
         return TCL_ERROR;
 
     llvm::Type *rt;
@@ -692,9 +1008,8 @@ NamedStructType(
 	rt = llvm::StructType::create(*llvm::unwrap(LLVMGetGlobalContext()),
 		name);
     } else {
-	llvm::ArrayRef<llvm::Type*> elements(
-		llvm::unwrap(types), unsigned(numTypes));
-	rt = llvm::StructType::create(elements, name, packed);
+	llvm::ArrayRef<llvm::Type*> elements(llvm::unwrap(types), numTypes);
+	rt = llvm::StructType::create(elements, name, bool(packed));
     }
 
     Tcl_SetObjResult(interp, NewObj(rt));
@@ -805,8 +1120,11 @@ DefineCommand(
     const char *tclName,
     Tcl_ObjCmdProc *cName)
 {
-    // Theoretically, this can blow up. It only actually does this if
-    // the interpreter is being deleted.
+    /*
+     * Theoretically, this can blow up. It only actually does this if
+     * the interpreter is being deleted.
+     */
+
     Tcl_CreateObjCommand(interp, tclName, cName, nullptr, nullptr);
 }
 
@@ -863,6 +1181,8 @@ DLLEXPORT int Llvmtcl_Init(Tcl_Interp *interp)
     LLVMObjCmd("llvmtcl::GetParams", GetParams);
     LLVMObjCmd("llvmtcl::GetStructElementTypes", GetStructElementTypes);
     LLVMObjCmd("llvmtcl::GetBasicBlocks", GetBasicBlocks);
+    LLVMObjCmd("llvmtcl::GetGlobals", GetGlobals);
+    LLVMObjCmd("llvmtcl::GetFunctions", GetFunctions);
     LLVMObjCmd("llvmtcl::CallInitialisePackageFunction",
 	    CallInitialisePackageFunction);
     LLVMObjCmd("llvmtcl::GetIntrinsicDefinition", GetIntrinsicDefinition);
@@ -878,6 +1198,7 @@ DLLEXPORT int Llvmtcl_Init(Tcl_Interp *interp)
     LLVMObjCmd("llvmtcl::MakeTargetMachine", MakeTargetMachine);
     LLVMObjCmd("llvmtcl::WriteModuleMachineCodeToFile",
 	    WriteModuleMachineCodeToFile);
+    LLVMObjCmd("llvmtcl::AddPass", LLVMTclAddPass);
     // Debugging info support
     LLVMObjCmd("llvmtcl::DebugInfo::BuildDbgValue", BuildDbgValue);
     LLVMObjCmd("llvmtcl::DebugInfo::CreateBuilder", CreateDebugBuilder);

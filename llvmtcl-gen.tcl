@@ -1,4 +1,64 @@
-package require Tcl 8.5
+package require Tcl 8.6
+
+proc val_as_obj {type value} {
+    switch -exact -- $type {
+	"LLVMBuilderRef" -
+	"LLVMContextRef" -
+	"LLVMBasicBlockRef" -
+	"LLVMValueRef" -
+	"LLVMTargetDataRef" -
+	"LLVMTypeKind" -
+	"LLVMVisibility" -
+	"LLVMCallConv" -
+	"LLVMOpcode" -
+	"LLVMLinkage" -
+	"LLVMVerifierFailureAction" -
+	"LLVMIntPredicate" -
+	"LLVMRealPredicate" -
+	"LLVMAttribute" -
+	"LLVMTypeHandleRef" -
+	"LLVMTypeRef" -
+	"LLVMPassManagerRef" -
+	"LLVMPassManagerBuilderRef" -
+	"LLVMTargetDataRef" -
+	"LLVMTargetMachineRef" -
+	"LLVMUseRef" -
+	"LLVMGenericValueRef" -
+	"LLVMModuleRef" {
+	    return "Set${type}AsObj(interp, $value)"
+	}
+	"LLVMExecutionEngineRef *" {
+	    return "Set[string trim $type { *}]AsObj(interp, $value)"
+	}
+	"std::string" {
+	    return "Tcl_NewStringObj($value.c_str(), -1)"
+	}
+	"const char *" -
+	"char **" {
+	    return "Tcl_NewStringObj($value, -1)"
+	}
+	"LLVMBool" -
+	"bool" -
+	"int" -
+	"unsigned" {
+	    return "Tcl_NewIntObj($value)"
+	}
+	"long long" -
+	"unsigned long long" {
+	    return "Tcl_NewWideIntObj((Tcl_WideInt)$value)"
+	}
+	"double" {
+	    return "Tcl_NewDoubleObj($value)"
+	}
+	"void" {
+	}
+	default {
+	    upvar 1 l definition
+	    return -code error \
+		"Unknown return type '$type' for '$value' in '$definition'"
+	}
+    }
+}
 
 proc gen_api_call {cf of l} {
     lassign [split $l "("] rtnm fargs
@@ -50,10 +110,9 @@ proc gen_api_call {cf of l} {
 	}
 	incr n 2
     }
-    puts $cf "    if (objc != $an) \{"
-    puts -nonewline $cf "        Tcl_WrongNumArgs(interp, 1, objv, \""
     set n 1
     set skip_next 0
+    set wnamsg ""
     foreach {fargtype fargname} $fargsl {
 	if {[string match "Out*" $fargname]} {
 	    # Skip this
@@ -64,21 +123,22 @@ proc gen_api_call {cf of l} {
 		error "Unknown type '$fargtype' in '$l'"
 	    }
 	    if {[string length $fargname]} {
-		puts -nonewline $cf "$fargname " 
+		append wnamsg "$fargname " 
 	    } else {
-		puts -nonewline $cf "$fargtype " 
+		append wnamsg "$fargtype " 
 	    }
 	    set skip_next 1
 	} elseif {$fargname ne ""} {
-	    puts -nonewline $cf "$fargname " 
+	    append wnamsg "$fargname " 
 	} else {
-	    puts -nonewline $cf "$fargtype " 
+	    append wnamsg "$fargtype " 
 	}
 	incr n
     }
-    puts $cf "\");"
-    puts $cf "        return TCL_ERROR;"
-    puts $cf "    \}"
+    puts $cf "    if (objc != $an) {
+        Tcl_WrongNumArgs(interp, 1, objv, \"[string trim $wnamsg]\");
+        return TCL_ERROR;
+    }"
     # Read arguments
     set n 1
     set on 1
@@ -90,10 +150,10 @@ proc gen_api_call {cf of l} {
 	    lappend out_args arg$n $fargtype
 	    switch -exact -- $fargtype {
 		"LLVMExecutionEngineRef *" {
-		    puts $cf "    [string trim $fargtype { *}] arg$n = 0; // output argument"
+		    puts $cf "    [string trim $fargtype { *}] arg$n = nullptr; // output argument"
 		}
 		"char **" {
-		    puts $cf "    char* arg$n = 0;"
+		    puts $cf "    char* arg$n = nullptr;"
 		}
 		default {
 		    error "Unknown type '$fargtype' in '$l'"
@@ -118,7 +178,7 @@ proc gen_api_call {cf of l} {
 		"LLVMTargetDataRef" -
 		"LLVMTargetMachineRef" -
 		"LLVMModuleRef" {
-		    puts $cf "    $fargtype arg$n = 0;"
+		    puts $cf "    $fargtype arg$n = nullptr;"
 		    puts $cf "    if (Get${fargtype}FromObj(interp, objv\[$on\], arg$n) != TCL_OK)"
 		    puts $cf "        return TCL_ERROR;"
 		}
@@ -140,20 +200,19 @@ proc gen_api_call {cf of l} {
 		"LLVMGenericValueRef *" -
 		"LLVMValueRef *" -
 		"LLVMTypeRef *" {
-		    if {[lindex $fargsl [expr {$n*2}]] ne "unsigned"} {
-			error "Unknown type '$fargtype' in '$l'"
+		    if {[lindex $fargsl [expr {$n * 2}]] ne "unsigned"} {
+			error "Unknown type '$fargtype' in '$l': $n, $fargsl"
 		    }
-		    puts $cf "    int iarg[expr {$n+1}] = 0;"
-		    puts $cf "    $fargtype arg$n = 0;"
-		    puts $cf "    if (GetListOf[string trim $fargtype { *}]FromObj(interp, objv\[$on\], arg$n, iarg[expr {$n+1}]) != TCL_OK)"
+		    puts $cf "    unsigned arg[expr {$n+1}] = 0;"
+		    puts $cf "    $fargtype arg$n = nullptr;"
+		    puts $cf "    if (GetListOf[string trim $fargtype { *}]FromObj(interp, objv\[$on\], arg$n, arg[expr {$n+1}]) != TCL_OK)"
 		    puts $cf "        return TCL_ERROR;"
-		    puts $cf "    unsigned arg[expr {$n+1}] = (unsigned)iarg[expr {$n+1}];"
 		    set skip_next 1
-		    lappend delete_args $n
+		    lappend delete_args arg$n
 		}
 		"std::string" -
 		"const char *" {
-		    puts $cf "    std::string arg$n = Tcl_GetStringFromObj(objv\[$on\], 0);"
+		    puts $cf "    std::string arg$n = Tcl_GetString(objv\[$on\]);"
 		}
 		"LLVMBool" -
 		"bool" -
@@ -169,17 +228,12 @@ proc gen_api_call {cf of l} {
 		    puts $cf "        return TCL_ERROR;"
 		    puts $cf "    $fargtype arg$n = ($fargtype)iarg$n;"
 		}
-		"long long" {
-		    puts $cf "    Tcl_WideInt iarg$n = 0;"
-		    puts $cf "    if (Tcl_GetWideIntFromObj(interp, objv\[$on\], &arg$n) != TCL_OK)"
-		    puts $cf "        return TCL_ERROR;"
-		    puts $cf "    long long arg$n = (long long)iarg$n;"
-		}
+		"long long" -
 		"unsigned long long" {
 		    puts $cf "    Tcl_WideInt iarg$n = 0;"
 		    puts $cf "    if (Tcl_GetWideIntFromObj(interp, objv\[$on\], &iarg$n) != TCL_OK)"
 		    puts $cf "        return TCL_ERROR;"
-		    puts $cf "    unsigned long long arg$n = (unsigned long long)iarg$n;"
+		    puts $cf "    $fargtype arg$n = ($fargtype)iarg$n;"
 		}
 		"double" {
 		    puts $cf "    double arg$n = 0;"
@@ -196,53 +250,16 @@ proc gen_api_call {cf of l} {
 	}
 	incr n
     }
-    # Variable for return value
     puts -nonewline $cf "    "
-    switch -exact -- $rt {
-	"LLVMBuilderRef" -
-	"LLVMBasicBlockRef" -
-	"LLVMValueRef" -
-	"LLVMTargetDataRef" -
-	"LLVMContextRef" -
-	"LLVMTypeKind" -
-	"LLVMVisibility" -
-	"LLVMCallConv" -
-	"LLVMOpcode" -
-	"LLVMLinkage" -
-	"LLVMVerifierFailureAction" -
-	"LLVMIntPredicate" -
-	"LLVMRealPredicate" -
-	"LLVMAttribute" -
-	"LLVMTypeHandleRef" -
-	"LLVMTypeRef" -
-	"LLVMBool" -
-	"bool" -
-	"LLVMModuleRef" -
-	"LLVMGenericValueRef" -
-	"LLVMPassManagerRef" -
-	"LLVMPassManagerBuilderRef" -
-	"LLVMTargetDataRef" -
-	"LLVMTargetMachineRef" -
-	"LLVMUseRef" -
-	"int" -
-	"long long" -
-	"double" -
-	"unsigned" -
-	"unsigned long long" -
-	"std::string" {
-	    puts -nonewline $cf "$rt rt = "
-	}
-	"void" {
-	}
-	default {
-	    error "Unknown return type '$rt' in '$l'"
-	}
+    # Variable for return value
+    if {$rt ne "void"} {
+	puts -nonewline $cf "$rt rt = "
     }
     # Call function
     if {[info exists ::rename($nm)]} {
-	puts -nonewline $cf "$::rename($nm) ("
+	puts -nonewline $cf "$::rename($nm)("
     } else {
-	puts -nonewline $cf "$nm ("
+	puts -nonewline $cf "${nm}("
     }
     set n 1
     foreach {fargtype fargname} $fargsl {
@@ -250,24 +267,11 @@ proc gen_api_call {cf of l} {
 	    puts -nonewline $cf ","
 	}
 	if {[string match "Out*" $fargname]} {
-	    switch -exact -- $fargtype {
-		"char **" -
-		"LLVMExecutionEngineRef *" {
-		    puts -nonewline $cf "&arg$n"
-		}
-		default {
-		    error "Unknown type '$fargtype' in '$l'"
-		}
-	    }
-	} else {
-	    switch -exact -- $fargtype {
-		"const char *" {
-		    puts -nonewline $cf "arg$n.c_str()"
-		}
-		default {
-		    puts -nonewline $cf "arg$n"
-		}
-	    }
+	    puts -nonewline $cf "&"
+	}
+	puts -nonewline $cf "arg$n"
+	if {$fargtype eq "const char *"} {
+	    puts -nonewline $cf ".c_str()"
 	}
 	incr n
     }
@@ -275,111 +279,22 @@ proc gen_api_call {cf of l} {
     # Return result
     if {[llength $out_args]} {
 	puts $cf "    Tcl_Obj* rtl = Tcl_NewListObj(0, NULL);"
-	foreach {rnm rtp} [linsert $out_args 0 rt $rt] {
-	    switch -exact -- $rtp {
-		"LLVMBuilderRef" -
-		"LLVMContextRef" -
-		"LLVMBasicBlockRef" -
-		"LLVMValueRef" -
-		"LLVMTargetDataRef" -
-		"LLVMTypeKind" -
-		"LLVMVisibility" -
-		"LLVMCallConv" -
-		"LLVMOpcode" -
-		"LLVMLinkage" -
-		"LLVMVerifierFailureAction" -
-		"LLVMIntPredicate" -
-		"LLVMRealPredicate" -
-		"LLVMAttribute" -
-		"LLVMTypeHandleRef" -
-		"LLVMTypeRef" -
-		"LLVMPassManagerRef" -
-		"LLVMPassManagerBuilderRef" -
-		"LLVMTargetDatRef" -
-		"LLVMTargetMachineRef" -
-		"LLVMUseRef" -
-		"LLVMGenericValueRef" -
-		"LLVMModuleRef" {
-		    puts $cf "    Tcl_ListObjAppendElement(interp, rtl, Set${rtp}AsObj(interp, $rnm));"
-		}
-		"LLVMExecutionEngineRef *" {
-		    puts $cf "    Tcl_ListObjAppendElement(interp, rtl, Set[string trim $rtp { *}]AsObj(interp, $rnm));"
-		}
-		"char **" {
-		    puts $cf "    Tcl_ListObjAppendElement(interp, rtl, Tcl_NewStringObj($rnm, -1));"
-		}
-		"LLVMBool" -
-		"bool" -
-		"int" -
-		"unsigned" {
-		    puts $cf "    Tcl_ListObjAppendElement(interp, rtl, Tcl_NewIntObj($rnm));"
-		}
-		"long long" -
-		"unsigned long long" {
-		    puts $cf "    Tcl_WideInt w$rnm = (Tcl_WideInt)$rnm;"
-		    puts $cf "    Tcl_ListObjAppendElement(interp, rtl, Tcl_NewWideIntObj(w$rnm));"
-		}
-		"double" {
-		    puts $cf "    Tcl_ListObjAppendElement(interp, rtl, Tcl_NewDoubleObj($rnm));"
-		}
-		"void" {
-		}
-		default {
-		    error "Unknown return type '$rtp' for '$rnm' in '$l'"
-		}
+	set oa [linsert $out_args 0 rt $rt]
+	foreach {rnm rtp} $oa {
+	    if {$rtp ne "void"} {
+		set rnm [val_as_obj $rtp $rnm]
+		puts $cf "    Tcl_ListObjAppendElement(interp, rtl, $rnm);"
 	    }
 	}
 	puts $cf "    Tcl_SetObjResult(interp, rtl);"
     } else {
-	switch -exact -- $rt {
-	    "LLVMBuilderRef" -
-	    "LLVMContextRef" -
-	    "LLVMBasicBlockRef" -
-	    "LLVMValueRef" -
-	    "LLVMTargetDataRef" -
-	    "LLVMTypeKind" -
-	    "LLVMVisibility" -
-	    "LLVMCallConv" -
-	    "LLVMOpcode" -
-	    "LLVMLinkage" -
-	    "LLVMVerifierFailureAction" -
-	    "LLVMIntPredicate" -
-	    "LLVMRealPredicate" -
-	    "LLVMAttribute" -
-	    "LLVMTypeHandleRef" -
-	    "LLVMTypeRef" -
-	    "LLVMPassManagerRef" -
-	    "LLVMPassManagerBuilderRef" -
-	    "LLVMTargetDataRef" -
-	    "LLVMTargetMachineRef" -
-	    "LLVMUseRef" -
-	    "LLVMGenericValueRef" -
-	    "LLVMModuleRef" {
-		puts $cf "    Tcl_SetObjResult(interp, Set${rt}AsObj(interp, rt));"
-	    }
-	    "LLVMBool" -
-	    "int" -
-	    "bool" -
-	    "unsigned" {
-		puts $cf "    Tcl_SetObjResult(interp, Tcl_NewIntObj(rt));"
-	    }
-	    "long long" -
-	    "unsigned long long" {
-		puts $cf "    Tcl_WideInt wrt = (Tcl_WideInt)rt;"
-		puts $cf "    Tcl_SetObjResult(interp, Tcl_NewWideIntObj(wrt));"
-	    }
-	    "double" {
-		puts $cf "    Tcl_SetObjResult(interp, Tcl_NewDoubleObj(rt));"
-	    }
-	    "std::string" {
-		puts $cf "    Tcl_SetObjResult(interp, Tcl_NewStringObj(rt.c_str(), -1));"
-	    }
-	    "void" {
-	    }
-	    default {
-		error "Unknown return type '$rt' in '$l'"
-	    }
+	if {$rt ne "void"} {
+	    set rv [val_as_obj $rt rt]
+	    puts $cf "    Tcl_SetObjResult(interp, $rv);"
 	}
+    }
+    foreach da $delete_args {
+	puts $cf "    delete [] $da;"
     }
     puts $cf "    return TCL_OK;"
     puts $cf "\}"
@@ -392,92 +307,110 @@ proc gen_api_call {cf of l} {
     puts $of "    LLVMObjCmd(\"llvmtcl::$cmdnm\", ${nm}ObjCmd);"
 }
 
+proc maptokens {vals body} {
+    upvar 1 pfx_len prefix sfx_len suffix
+    return [join [lmap val $vals {
+    	set token "\"[string tolower [string range $val $prefix end-$suffix]]\""
+	string trim [subst $body] "\n"
+    }] "\n"]
+}
 proc gen_enum {cf l} {
-    set idx1 [string first \{ $l]
-    set idx2 [string last \} $l]
-    set vals [split [string trim [string range $l [expr {$idx1 + 1}] [expr {$idx2 - 1}]]] ,]
-    set nm [string trim [string trim [string trim [string range $l [expr {$idx2+1}] end]] \;]]
-    puts $cf "int Get${nm}FromObj(Tcl_Interp* interp, Tcl_Obj* obj, $nm& e) \{"
-    puts $cf "    static std::map<std::string, $nm> s2e;"
-    puts $cf "    if (s2e.size() == 0) \{"
-    foreach val $vals {
-	set val [string trim $val]
-	puts $cf "        s2e\[\"$val\"\] = $val;"
+    set template {
+int Get${nm}FromObj(Tcl_Interp* interp, Tcl_Obj* obj, $nm& e) {
+    static std::map<std::string, $nm> s2e;
+    if (s2e.size() == 0) {
+[maptokens $vals {
+        s2e\[$token\] = $val;
+}]
     }
-    puts $cf "    \}"
-    puts $cf "    std::string s = Tcl_GetStringFromObj(obj, 0);"
-    puts $cf "    if (s2e.find(s) == s2e.end()) \{"
-    puts $cf "        std::ostringstream os;"
-    puts $cf "        os << \"expected $nm but got '\" << s << \"'\";"
-    puts $cf "        Tcl_SetObjResult(interp, Tcl_NewStringObj(os.str().c_str(), -1));"
-    puts $cf "        return TCL_ERROR;"
-    puts $cf "    \}"
-    puts $cf "    e = s2e\[s\];"
-    puts $cf "    return TCL_OK;"
-    puts $cf "\}"
-    puts $cf "Tcl_Obj* Set${nm}AsObj(Tcl_Interp* interp, $nm e) \{"
-    puts $cf "    static std::map<$nm, std::string> e2s;"
-    puts $cf "    if (e2s.size() == 0) \{"
-    foreach val $vals {
-	set val [string trim $val]
-	puts $cf "        e2s\[$val\] = \"$val\";"
+    std::string s = Tcl_GetStringFromObj(obj, 0);
+    if (s2e.find(s) == s2e.end()) {
+        std::ostringstream os;
+        os << \"expected $nm but got \\\"\" << s << \"\\\"\";
+        Tcl_SetObjResult(interp, Tcl_NewStringObj(os.str().c_str(), -1));
+        return TCL_ERROR;
     }
-    puts $cf "    \}"
-    puts $cf "    std::string s;"
-    puts $cf "    if (e2s.find(e) == e2s.end())"
-    puts $cf "        s = \"<unknown $nm>\";"
-    puts $cf "    else"
-    puts $cf "        s = e2s\[e\];"
-    puts $cf "    return Tcl_NewStringObj(s.c_str(), -1);"
-    puts $cf "\}"
+    e = s2e\[s\];
+    return TCL_OK;
+}
+Tcl_Obj* Set${nm}AsObj(Tcl_Interp* interp, $nm e) {
+    static std::map<$nm, std::string> e2s;
+    if (e2s.size() == 0) {
+[maptokens $vals {
+        e2s\[$val\] = $token;
+}]
+    }
+    std::string s;
+    if (e2s.find(e) == e2s.end())
+        s = \"<unknown $nm>\";
+    else
+        s = e2s\[e\];
+    return Tcl_NewStringObj(s.c_str(), -1);
+}
+    }
+
+    regexp {\{(.*)\} (.*);} $l -> vals nm
+    set vals [lmap val [split $vals ,] {string trim $val}]
+    set nm [string trim $nm]
+    set pfx_len [string length [tcl::prefix longest $vals ""]]
+    set sfx_len [string length [tcl::prefix longest [lmap val $vals {
+	string reverse $val
+    }] ""]]
+    puts $cf [string trim [subst $template]]
 }
 
 proc gen_map {mf l} {
-    set tp [lindex [string trim $l] end]
-    puts $mf "static std::map<std::string, $tp> ${tp}_map;"
-    puts $mf "static std::map<$tp, std::string> ${tp}_refmap;"
-    puts $mf "int Get${tp}FromObj(Tcl_Interp* interp, Tcl_Obj* obj, $tp& ref) \{"
-    puts $mf "    ref = 0;"
-    puts $mf "    std::string refName = Tcl_GetStringFromObj(obj, 0);"
-    puts $mf "    if (${tp}_map.find(refName) == ${tp}_map.end()) \{"
-    puts $mf "        std::ostringstream os;"
-    puts $mf "        os << \"expected $tp but got '\" << refName << \"'\";"
-    puts $mf "        Tcl_SetObjResult(interp, Tcl_NewStringObj(os.str().c_str(), -1));"
-    puts $mf "        return TCL_ERROR;"
-    puts $mf "    \}"
-    puts $mf "    ref = ${tp}_map\[refName\];"
-    puts $mf "    return TCL_OK;"
-    puts $mf "\}"
-    puts $mf "int GetListOf${tp}FromObj(Tcl_Interp* interp, Tcl_Obj* obj, $tp*& refs, int& count) \{"
-    puts $mf "    refs = 0;"
-    puts $mf "    count = 0;"
-    puts $mf "    Tcl_Obj** objs = 0;"
-    puts $mf "    if (Tcl_ListObjGetElements(interp, obj, &count, &objs) != TCL_OK) \{"
-    puts $mf "        std::ostringstream os;"
-    puts $mf "        os << \"expected list of types but got \\\"\" << Tcl_GetStringFromObj(obj, 0) << \"\\\"\";"
-    puts $mf "        Tcl_SetObjResult(interp, Tcl_NewStringObj(os.str().c_str(), -1));"
-    puts $mf "        return TCL_ERROR;"
-    puts $mf "    \}"
-    puts $mf "    if (count == 0)"
-    puts $mf "        return TCL_OK;"
-    puts $mf "    refs = new $tp\[count\];"
-    puts $mf "    for(int i =0; i < count; i++) \{"
-    puts $mf "        if (Get${tp}FromObj(interp, objs\[i\], refs\[i\])) \{"
-    puts $mf "            delete [] refs;"
-    puts $mf "            return TCL_ERROR;"
-    puts $mf "        \}"
-    puts $mf "    \}"
-    puts $mf "    return TCL_OK;"
-    puts $mf "\}"
-    puts $mf "Tcl_Obj* Set${tp}AsObj(Tcl_Interp* interp, $tp ref) \{"
-    puts $mf "    if (!ref) return Tcl_NewObj();"
-    puts $mf "    if (${tp}_refmap.find(ref) == ${tp}_refmap.end()) \{"
-    puts $mf "        std::string nm = GetRefName(\"${tp}_\");"
-    puts $mf "        ${tp}_map\[nm\] = ref;"
-    puts $mf "        ${tp}_refmap\[ref\] = nm;"
-    puts $mf "    \}"
-    puts $mf "    return Tcl_NewStringObj(${tp}_refmap\[ref\].c_str(), -1);"
-    puts $mf "\}"
+    set template {
+static std::map<std::string, $tp> ${tp}_map;
+static std::map<$tp, std::string> ${tp}_refmap;
+int Get${tp}FromObj(Tcl_Interp* interp, Tcl_Obj* obj, $tp& ref) {
+    ref = 0;
+    std::string refName = Tcl_GetStringFromObj(obj, 0);
+    if (${tp}_map.find(refName) == ${tp}_map.end()) {
+        std::ostringstream os;
+        os << "expected $tp but got \"" << refName << "\"";
+        Tcl_SetObjResult(interp, Tcl_NewStringObj(os.str().c_str(), -1));
+        return TCL_ERROR;
+    }
+    ref = ${tp}_map[refName];
+    return TCL_OK;
+}
+int GetListOf${tp}FromObj(Tcl_Interp* interp, Tcl_Obj* obj, $tp*& refs, unsigned& count) {
+    refs = 0;
+    count = 0;
+    Tcl_Obj** objs = 0;
+    int length;
+    if (Tcl_ListObjGetElements(interp, obj, &length, &objs) != TCL_OK) {
+        std::ostringstream os;
+        os << "expected list of types but got \"" << Tcl_GetStringFromObj(obj, 0) << "\"";
+        Tcl_SetObjResult(interp, Tcl_NewStringObj(os.str().c_str(), -1));
+        return TCL_ERROR;
+    }
+    count = unsigned(length);
+    if (count == 0)
+        return TCL_OK;
+    refs = new $tp[count];
+    for(unsigned i = 0; i < count; i++) {
+        if (Get${tp}FromObj(interp, objs[i], refs[i])) {
+            delete [] refs;
+            return TCL_ERROR;
+        }
+    }
+    return TCL_OK;
+}
+Tcl_Obj* Set${tp}AsObj(Tcl_Interp* interp, $tp ref) {
+    if (!ref) return Tcl_NewObj();
+    if (${tp}_refmap.find(ref) == ${tp}_refmap.end()) {
+        std::string nm = GetRefName("${tp}_");
+        ${tp}_map[nm] = ref;
+        ${tp}_refmap[ref] = nm;
+    }
+    return Tcl_NewStringObj(${tp}_refmap[ref].c_str(), -1);
+}
+}
+
+    set tp [lindex [string trim $l " ;"] end]
+    puts $mf [string trim [subst -nocommands $template] "\n"]
 }
 
 set srcdir [file dirname [info script]]
@@ -498,10 +431,12 @@ set mf [open [file join $targetdir llvmtcl-gen-map.h] w]
 
 foreach l $ll {
     set l [string trim $l]
-    if {[llength $l] == 0} continue
+    if {$l eq ""} continue
     switch -glob -- $l {
 	"//*" { continue }
-	"rename *" { set rename([lindex $l 1]) [lindex $l 2] }
+	"rename *" {
+	    set rename([lindex $l 1]) [string trim [lindex $l 2] ";"]
+	}
 	"enum *" { gen_enum $cf $l }
 	"typedef *" { gen_map $mf $l }
 	default { gen_api_call $cf $of $l }
