@@ -829,10 +829,20 @@ DefineFunction(
     DISubroutineType *type;
     if (GetMetadataFromObj(interp, objv[7], "subroutine type", type) != TCL_OK)
 	return TCL_ERROR;
+
+#ifdef API_8
+    DISubprogram::DISPFlags flags =
+	    DISubprogram::SPFlagLocalToUnit | DISubprogram::SPFlagDefinition |
+	    DISubprogram::SPFlagOptimized;
+
+    auto val = builder->createFunction(scope, name, linkName, file, line,
+	    type, line, DINode::FlagZero, flags);
+#else
     bool isOpt = true, isLocal = true, isDef = true;
 
     auto val = builder->createFunction(scope, name, linkName, file, line,
 	    type, isLocal, isDef, line, DINode::FlagZero, isOpt);
+#endif // API_8
 
     Tcl_SetObjResult(interp, NewMetadataObj(val, "Function"));
     return TCL_OK;
