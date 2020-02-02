@@ -626,7 +626,7 @@ GetStructElementTypes(
  * ------------------------------------------------------------------------
  *
  * GetBasicBlocks --
- *	Implements a Tcl command for geting the basic blocks of a function.
+ *	Implements a Tcl command for getting the basic blocks of a function.
  *
  * ------------------------------------------------------------------------
  */
